@@ -1,7 +1,9 @@
 use specs::{Join, World};
+use conrod::Widget;
 
 widget_ids! {
     pub struct Ids {
+        triangles
     }
 }
 
@@ -36,9 +38,26 @@ pub trait GameState {
 pub struct Game;
 
 impl GameState for Game {
-    fn update_draw_ui(self: Box<Self>, _ui: &mut ::conrod::UiCell, _ids: &Ids, _world: &mut World) -> Box<GameState> {
+    fn update_draw_ui(self: Box<Self>, ui: &mut ::conrod::UiCell, ids: &Ids, world: &mut World) -> Box<GameState> {
+        // let rect = ui.rect_of(ui.window).unwrap();
+        // let (l, r, b, t) = rect.l_r_b_t();
+        // let (c1, c2, c3) = (::conrod::color::RED.to_rgb(), ::conrod::color::GREEN.to_rgb(), ::conrod::color::BLUE.to_rgb());
+
+        // let triangles = [
+        //     ::conrod::widget::primitive::shape::triangles::Triangle([([l, b], c1), ([l, t], c2), ([r, t], c3)]),
+        //     ::conrod::widget::primitive::shape::triangles::Triangle([([r, t], c1), ([r, b], c2), ([l, b], c3)]),
+        // ];
+
+        // ::conrod::widget::Triangles::multi_color(triangles.iter().cloned())
+        //     .with_bounding_rect(rect)
+        //     .set(ids.triangles, ui);
+
+        ::conrod::widget::Rectangle::fill_with([100.0, 100.0], ::conrod::color::Color::Rgba(1.0, 0.0, 1.0, 0.5))
+            .set(ids.triangles, ui);
+
         self
     }
+
     fn winit_event(
         self: Box<Self>,
         _event: ::winit::Event,

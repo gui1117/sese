@@ -1,3 +1,4 @@
+extern crate app_dirs2;
 #[macro_use]
 extern crate derive_deref;
 #[macro_use]
@@ -49,6 +50,8 @@ use std::thread;
 use specs::{DispatcherBuilder, World, Join};
 
 fn main() {
+    let mut save = ::resource::Save::new();
+
     let mut gilrs = gilrs::Gilrs::new()
         .ok_or_show(|e| format!("Failed to initialize gilrs: {}\n\n{:#?}", e, e));
 
@@ -69,9 +72,13 @@ fn main() {
         .ok_or_show(|e| format!("Failed to grab cursor: {}", e));
     window.window().set_cursor(winit::MouseCursor::NoneCursor);
 
-    let mut graphics = graphics::Graphics::new(&window);
-    // TODO: set width and height
-    let mut ui = conrod::UiBuilder::new([1920.0, 1080.0])
+    let mut graphics = graphics::Graphics::new(&window, &mut save);
+
+    let dimensions = {
+        let d = graphics.swapchain.dimensions();
+        [d[0] as f64, d[1] as f64]
+    };
+    let mut ui = conrod::UiBuilder::new(dimensions)
         .build();
     let ids = game_state::Ids::new(ui.widget_id_generator());
 
