@@ -1,6 +1,7 @@
 use std::fs::File;
+use std::path::PathBuf;
 
-const FILENAME: &str = "cfg.ron";
+const FILENAME: &str = "configuration.ron";
 
 lazy_static! {
     pub static ref CFG: Configuration = {
@@ -13,6 +14,7 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize)]
 pub struct Configuration {
+    pub fps: usize,
 }
 
 impl Configuration {
