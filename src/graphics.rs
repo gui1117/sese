@@ -3,7 +3,7 @@ use vulkano::swapchain::{self, Swapchain, SwapchainCreationError, Surface};
 use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
 use vulkano::image::{AttachmentImage, Dimensions, ImageUsage, ImmutableImage, ImageAccess, StorageImage};
 use vulkano::image::swapchain::SwapchainImage;
-use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer};
+use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer, CpuAccessibleBuffer};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, LayoutAttachmentDescription,
                            LayoutPassDependencyDescription, LayoutPassDescription, LoadOp,
                            RenderPassAbstract, RenderPassDesc,
@@ -218,9 +218,9 @@ impl Graphics {
             Filter::Linear,
             Filter::Linear,
             MipmapMode::Nearest,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
-            SamplerAddressMode::Repeat,
+            SamplerAddressMode::ClampToEdge,
+            SamplerAddressMode::ClampToEdge,
+            SamplerAddressMode::ClampToEdge,
             0.0, 1.0, 0.0, 0.0,
         ).unwrap();
 
@@ -395,6 +395,7 @@ impl Graphics {
             let mut vertices = vec![];
             match primitive.kind {
                 PrimitiveKind::Rectangle { color } => {
+                    continue;
                     let color = gamma_srgb_to_linear(color.to_fsa());
                     let (l, r, b, t) = primitive.rect.l_r_b_t();
 
@@ -420,6 +421,7 @@ impl Graphics {
                     push_v(r, t);
                 },
                 PrimitiveKind::TrianglesSingleColor { color, triangles } => {
+                    continue;
                     if triangles.is_empty() {
                         continue;
                     }
@@ -442,6 +444,7 @@ impl Graphics {
                     }
                 },
                 PrimitiveKind::TrianglesMultiColor { triangles } => {
+                    continue;
                     if triangles.is_empty() {
                         continue;
                     }
@@ -462,7 +465,6 @@ impl Graphics {
                     }
                 },
                 PrimitiveKind::Text { color, text, font_id } => {
-                    println!("{:?}", primitive.rect);
                     let positioned_glyphs = text.positioned_glyphs(dpi_factor as f32);
 
                     // Queue the glyphs to be cached.
@@ -474,6 +476,7 @@ impl Graphics {
                     {
                         let ref mut glyph_cache_pixel_buffer = self.glyph_cache_pixel_buffer;
                         self.glyph_cache.cache_queued(|rect, src_data| {
+                            println!("cached");
                             *changed.borrow_mut() = true;
                             let width = (rect.max.x - rect.min.x) as usize;
                             let height = (rect.max.y - rect.min.y) as usize;
@@ -492,7 +495,8 @@ impl Graphics {
                     }
                     let changed = changed.borrow();
 
-                    if *changed {
+                    if true {
+                    // if *changed {
                         let (glyph_cache_image, future) = ImmutableImage::from_iter(
                             self.glyph_cache_pixel_buffer.iter().cloned(),
                             Dimensions::Dim2d { width: ::CFG.glyph_width as u32, height: ::CFG.glyph_height as u32 },
@@ -518,37 +522,38 @@ impl Graphics {
                     let to_gl_rect = |screen_rect: text::rt::Rect<i32>| text::rt::Rect {
                         min: origin
                             + (text::rt::vector(screen_rect.min.x as f32 / dimensions[0] as f32 - 0.5,
-                                          1.0 - screen_rect.min.y as f32 / dimensions[1] as f32 - 0.5)) * 2.0,
+                                          screen_rect.min.y as f32 / dimensions[1] as f32 - 0.5)) * 2.0,
                         max: origin
                             + (text::rt::vector(screen_rect.max.x as f32 / dimensions[0] as f32 - 0.5,
-                                          1.0 - screen_rect.max.y as f32 / dimensions[1] as f32 - 0.5)) * 2.0
+                                          screen_rect.max.y as f32 / dimensions[1] as f32 - 0.5)) * 2.0
                     };
 
                     for g in positioned_glyphs {
                         if let Ok(Some((uv_rect, screen_rect))) = self.glyph_cache.rect_for(cache_id, g) {
-                            let gl_rect = to_gl_rect(screen_rect);
-                            let v = |p: [f32; 2], t: [f32; 2]| Vertex {
-                                position: [p[0], -p[1]],
-                                tex_coords: t,
+                            let mut gl_rect = to_gl_rect(screen_rect);
+                            let v = |p, t: [f32; 2]| Vertex {
+                                position: p,
+                                tex_coords: [t[0],  t[1]],
                                 color: color,
                                 mode: UiMode::Text as u32,
                             };
                             let mut push_v = |p, t| vertices.push(v(p, t));
-                            push_v([gl_rect.min.x, gl_rect.max.y], [uv_rect.min.x, uv_rect.max.y]);
-                            push_v([gl_rect.min.x, gl_rect.min.y], [uv_rect.min.x, uv_rect.min.y]);
-                            push_v([gl_rect.max.x, gl_rect.min.y], [uv_rect.max.x, uv_rect.min.y]);
+                            let t = 0.0;
+                            let i = 0.0;
+                            push_v([gl_rect.min.x-i, gl_rect.max.y+i], [uv_rect.min.x-t, uv_rect.max.y+t]);
+                            push_v([gl_rect.min.x-i, gl_rect.min.y-i], [uv_rect.min.x-t, uv_rect.min.y-t]);
+                            push_v([gl_rect.max.x+i, gl_rect.min.y-i], [uv_rect.max.x+t, uv_rect.min.y-t]);
 
-                            push_v([gl_rect.max.x, gl_rect.max.y], [uv_rect.max.x, uv_rect.max.y]);
-                            push_v([gl_rect.max.x, gl_rect.min.y], [uv_rect.max.x, uv_rect.min.y]);
-                            push_v([gl_rect.min.x, gl_rect.max.y], [uv_rect.min.x, uv_rect.max.y]);
+                            push_v([gl_rect.max.x+i, gl_rect.max.y+i], [uv_rect.max.x+t, uv_rect.max.y+t]);
+                            push_v([gl_rect.max.x+i, gl_rect.min.y-i], [uv_rect.max.x+t, uv_rect.min.y-t]);
+                            push_v([gl_rect.min.x-i, gl_rect.max.y+i], [uv_rect.min.x-t, uv_rect.max.y+t]);
                         }
                     }
                 },
                 _ => unreachable!(),
             }
 
-            let (buffer, future) = ImmutableBuffer::from_iter(vertices.into_iter(), BufferUsage::vertex_buffer(), self.queue.clone()).unwrap();
-            self.future = Some(Box::new(self.future.take().unwrap().join(future)) as Box<_>);
+            let buffer = CpuAccessibleBuffer::from_iter(self.device.clone(), BufferUsage::all(), vertices.into_iter()).unwrap();
 
             command_buffer_builder = command_buffer_builder.draw(
                 self.pipeline.clone(),
@@ -612,7 +617,7 @@ layout(set = 0, binding = 0) uniform sampler2D tex;
 void main() {
     // Text
     if (v_mode == uint(0)) {
-        f_color = v_color * vec4(1.0, 1.0, 1.0, texture(tex, v_tex_coords).r);
+        f_color = v_color * texture(tex, v_tex_coords).r;
 
     // 2D Geometry
     } else if (v_mode == uint(1)) {

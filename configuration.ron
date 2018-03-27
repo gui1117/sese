@@ -1,10 +1,10 @@
 Configuration(
     fps: 60,
 
-    glyph_scale_tolerance: 1.0,
-    glyph_position_tolerance: 1.0,
-    glyph_width: 1920,
-    glyph_height: 1080,
+    glyph_scale_tolerance: 0.1,
+    glyph_position_tolerance: 0.1,
+    glyph_width: 1000,
+    glyph_height: 1000,
 
     font_file: "DejaVuSans.ttf",
 )

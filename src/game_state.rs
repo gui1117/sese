@@ -54,7 +54,7 @@ impl GameState for Game {
             (ids.right_col, widget::Canvas::new().color(color::CHARCOAL)),
         ]).set(ids.master, ui);
 
-        const DEMO_TEXT: &'static str = "LL L  L    L      L";
+        const DEMO_TEXT: &'static str = "AAZERTYUIOPQSDFGHJKLMWXCVBN?.L";
 
         const PAD: Scalar = 20.0;
 
@@ -66,7 +66,9 @@ impl GameState for Game {
             .line_spacing(10.0)
             .set(ids.left_text, ui);
 
-        widget::Text::new(DEMO_TEXT)
+        const AA: &'static str = "A\nB\nC\nD";
+
+        widget::Text::new(AA)
             .color(color::LIGHT_GREEN)
             .padded_w_of(ids.middle_col, PAD)
             .middle_of(ids.middle_col)
@@ -74,13 +76,6 @@ impl GameState for Game {
             .line_spacing(2.5)
             .set(ids.middle_text, ui);
 
-        widget::Text::new(DEMO_TEXT)
-            .color(color::LIGHT_BLUE)
-            .padded_w_of(ids.right_col, PAD)
-            .mid_bottom_with_margin_on(ids.right_col, PAD)
-            .right_justify()
-            .line_spacing(5.0)
-            .set(ids.right_text, ui);
         self
     }
 
