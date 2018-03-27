@@ -78,9 +78,9 @@ fn main() {
         let d = graphics.swapchain.dimensions();
         [d[0] as f64, d[1] as f64]
     };
-    let mut ui = conrod::UiBuilder::new(dimensions)
-        .build();
+    let mut ui = conrod::UiBuilder::new(dimensions).build();
     let ids = game_state::Ids::new(ui.widget_id_generator());
+    ui.theme.font_id = Some(ui.fonts.insert_from_file(::CFG.font_file.clone()).unwrap());
 
     let mut world = World::new();
     world.register::<::component::RigidBody>();

@@ -3,7 +3,13 @@ use conrod::Widget;
 
 widget_ids! {
     pub struct Ids {
-        triangles
+        master,
+        left_col,
+        middle_col,
+        right_col,
+        left_text,
+        middle_text,
+        right_text,
     }
 }
 
@@ -39,22 +45,42 @@ pub struct Game;
 
 impl GameState for Game {
     fn update_draw_ui(self: Box<Self>, ui: &mut ::conrod::UiCell, ids: &Ids, world: &mut World) -> Box<GameState> {
-        // let rect = ui.rect_of(ui.window).unwrap();
-        // let (l, r, b, t) = rect.l_r_b_t();
-        // let (c1, c2, c3) = (::conrod::color::RED.to_rgb(), ::conrod::color::GREEN.to_rgb(), ::conrod::color::BLUE.to_rgb());
+        use conrod::{color, widget, Colorable, Positionable, Scalar, Sizeable, Widget};
 
-        // let triangles = [
-        //     ::conrod::widget::primitive::shape::triangles::Triangle([([l, b], c1), ([l, t], c2), ([r, t], c3)]),
-        //     ::conrod::widget::primitive::shape::triangles::Triangle([([r, t], c1), ([r, b], c2), ([l, b], c3)]),
-        // ];
+        // Our `Canvas` tree, upon which we will place our text widgets.
+        widget::Canvas::new().flow_right(&[
+            (ids.left_col, widget::Canvas::new().color(color::BLACK)),
+            (ids.middle_col, widget::Canvas::new().color(color::DARK_CHARCOAL)),
+            (ids.right_col, widget::Canvas::new().color(color::CHARCOAL)),
+        ]).set(ids.master, ui);
 
-        // ::conrod::widget::Triangles::multi_color(triangles.iter().cloned())
-        //     .with_bounding_rect(rect)
-        //     .set(ids.triangles, ui);
+        const DEMO_TEXT: &'static str = "LL L  L    L      L";
 
-        ::conrod::widget::Rectangle::fill_with([100.0, 100.0], ::conrod::color::Color::Rgba(1.0, 0.0, 1.0, 0.5))
-            .set(ids.triangles, ui);
+        const PAD: Scalar = 20.0;
 
+        widget::Text::new(DEMO_TEXT)
+            .color(color::LIGHT_RED)
+            .padded_w_of(ids.left_col, PAD)
+            .mid_top_with_margin_on(ids.left_col, PAD)
+            .left_justify()
+            .line_spacing(10.0)
+            .set(ids.left_text, ui);
+
+        widget::Text::new(DEMO_TEXT)
+            .color(color::LIGHT_GREEN)
+            .padded_w_of(ids.middle_col, PAD)
+            .middle_of(ids.middle_col)
+            .center_justify()
+            .line_spacing(2.5)
+            .set(ids.middle_text, ui);
+
+        widget::Text::new(DEMO_TEXT)
+            .color(color::LIGHT_BLUE)
+            .padded_w_of(ids.right_col, PAD)
+            .mid_bottom_with_margin_on(ids.right_col, PAD)
+            .right_justify()
+            .line_spacing(5.0)
+            .set(ids.right_text, ui);
         self
     }
 
