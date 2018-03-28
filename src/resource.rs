@@ -8,7 +8,7 @@ pub type PhysicWorld = ::nphysics::world::World<f32>;
 
 #[derive(Deref, DerefMut)]
 pub struct UpdateTime(pub f32);
-pub use conrod::render::OwnedPrimitives;
+pub type ImGuiOption = Option<::imgui::ImGui>;
 
 const APP_INFO: AppInfo = AppInfo { name: "HyperZen Training", author: "thiolliere" };
 const FILENAME: &str = "save.ron";

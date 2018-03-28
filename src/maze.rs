@@ -1,4 +1,5 @@
 use rand::distributions::{IndependentSample, Range};
+use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -40,6 +41,40 @@ where
     size: ::na::VectorN<isize, D>,
     openings: Vec<Opening<D>>,
     neighbours: Vec<::na::VectorN<isize, D>>,
+}
+
+impl Maze<::na::U3> {
+    /// take a random wall, set the larger not colored cuboid containing it to one color
+    ///
+    /// continue while some wall are not colored
+    pub fn build_colors(&self) -> HashMap<::na::Vector3<isize>, usize> {
+        let mut wall_random_list = self.walls.iter().cloned().collect::<Vec<_>>();
+        let mut color = 0;
+        thread_rng().shuffle(&mut wall_random_list);
+
+        let mut colored = HashMap::new();
+        for wall in wall_random_list {
+            if colored.contains_key(&wall) {
+                continue;
+            }
+
+            let mut expand = vec![wall];
+            while let Some(wall) = expand.pop() {
+                self.neighbours
+                    .iter()
+                    .map(|n| n + wall)
+                    .filter(|n| self.walls.contains(n))
+                    .filter(|n| !colored.contains_key(n))
+                    .for_each(|n| expand.push(n));
+
+                colored.insert(wall, color);
+            }
+
+            color += 1;
+        }
+
+        colored
+    }
 }
 
 impl<D> Maze<D>

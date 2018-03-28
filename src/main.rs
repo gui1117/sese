@@ -24,12 +24,16 @@ extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
 extern crate alga;
-#[macro_use]
-extern crate conrod;
 extern crate show_message;
+#[macro_use]
+extern crate imgui;
+extern crate typenum;
+extern crate generic_array;
+extern crate pathfinding;
 
 mod component;
 mod configuration;
+mod maze;
 mod resource;
 #[macro_use]
 mod util;
@@ -52,6 +56,8 @@ use specs::{DispatcherBuilder, World, Join};
 fn main() {
     let mut save = ::resource::Save::new();
 
+    let mut imgui = ::imgui::ImGui::init();
+
     let mut gilrs = gilrs::Gilrs::new()
         .ok_or_show(|e| format!("Failed to initialize gilrs: {}\n\n{:#?}", e, e));
 
@@ -72,20 +78,18 @@ fn main() {
         .ok_or_show(|e| format!("Failed to grab cursor: {}", e));
     window.window().set_cursor(winit::MouseCursor::NoneCursor);
 
-    let mut graphics = graphics::Graphics::new(&window, &mut save);
+    let mut graphics = graphics::Graphics::new(&window, &mut imgui, &mut save);
 
     let dimensions = {
         let d = graphics.swapchain.dimensions();
         [d[0] as f64, d[1] as f64]
     };
-    let mut ui = conrod::UiBuilder::new(dimensions).build();
-    let ids = game_state::Ids::new(ui.widget_id_generator());
-    ui.theme.font_id = Some(ui.fonts.insert_from_file(::CFG.font_file.clone()).unwrap());
 
     let mut world = World::new();
     world.register::<::component::RigidBody>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
+    world.add_resource(Some(imgui));
     world.maintain();
 
     let mut update_dispatcher = DispatcherBuilder::new()
@@ -130,14 +134,14 @@ fn main() {
                 }
                 _ => (),
             }
-            game_state = game_state.winit_event(ev, &mut world, &mut ui);
+            game_state = game_state.winit_event(ev, &mut world);
         }
         while let Some(ev) = gilrs.next_event() {
             gilrs.update(&ev);
-            game_state = game_state.gilrs_event(ev.event, &mut world, &mut ui);
+            game_state = game_state.gilrs_event(ev.event, &mut world);
         }
         for (id, gamepad) in gilrs.gamepads() {
-            game_state = game_state.gilrs_gamepad_state(id, gamepad, &mut world, &mut ui);
+            game_state = game_state.gilrs_gamepad_state(id, gamepad, &mut world);
         }
 
         // Quit
@@ -155,8 +159,6 @@ fn main() {
             as f32 / 1_000_000_000.0;
 
         update_dispatcher.dispatch(&mut world.res);
-        game_state = game_state.update_draw_ui(&mut ui.set_widgets(), &ids, &mut world);
-        world.add_resource(ui.draw().owned());
 
         // Maintain world and synchronize physic world
         world.maintain();
@@ -168,7 +170,7 @@ fn main() {
         }
 
         // Draw
-        graphics.draw(&mut world, &window);
+        game_state = graphics.draw(&mut world, &window, game_state);
 
         // Sleep
         let elapsed = last_frame_instant.elapsed();

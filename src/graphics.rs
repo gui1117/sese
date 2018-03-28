@@ -21,9 +21,6 @@ use vulkano::format::{self, ClearValue, Format};
 use vulkano;
 use ncollide::shape;
 use alga::general::SubsetOf;
-use conrod::render::PrimitiveKind;
-use conrod::position::Scalar;
-use conrod::text;
 use std::sync::Arc;
 use std::fs::File;
 use std::time::Duration;
@@ -32,35 +29,39 @@ use std::cell::RefCell;
 use specs::World;
 use show_message::{OkOrShow, SomeOrShow};
 
-#[repr(C)]
-pub enum UiMode {
-    Text,
-    Geometry,
-}
-
 #[derive(Debug, Clone)]
-struct Vertex {
-    position: [f32; 2],
-    tex_coords: [f32; 2],
-    color: [f32; 4],
-    mode: u32,
+pub struct ImGuiVertex {
+    pos: [f32; 2],
+    uv: [f32; 2],
+    col: [f32; 4],
 }
-impl_vertex!(Vertex, position, tex_coords, color, mode);
+impl_vertex!(ImGuiVertex, pos, uv, col);
+impl ImGuiVertex {
+    fn from_im_draw_vert(vertex: &::imgui::ImDrawVert) -> Self {
+        let r = vertex.col as u8 as f32;
+        let g = (vertex.col >> 8) as u8 as f32;
+        let b = (vertex.col >> 16) as u8 as f32;
+        let a = (vertex.col >> 24) as u8 as f32;
+        ImGuiVertex {
+            pos: [vertex.pos.x, vertex.pos.y],
+            uv: [vertex.uv.x, vertex.uv.y],
+            col: [r, g, b, a],
+        }
+    }
+}
 
 pub struct Graphics {
     pub queue: Arc<Queue>,
     pub device: Arc<Device>,
     pub swapchain: Arc<Swapchain<::winit::Window>>,
     pub render_pass: Arc<RenderPass<CustomRenderPassDesc>>,
-    pub pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
+    pub imgui_pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
     pub framebuffers: Vec<Arc<FramebufferAbstract + Sync + Send>>,
 
-    pub glyph_cache: text::GlyphCache<'static>,
-    pub glyph_cache_pixel_buffer: Vec<u8>,
-    pub glyph_cache_image_descriptor_set: Arc<DescriptorSet + Sync + Send>,
-    pub glyph_cache_image_sampler: Arc<Sampler>,
-    // view_buffer_pool: CpuBufferPool<vs::ty::View>,
-    // world_buffer_pool: CpuBufferPool<vs::ty::World>,
+    pub imgui_descriptor_set: Arc<DescriptorSet + Sync + Send>,
+
+    // view_buffer_pool: CpuBufferPool<imgui_vs::ty::View>,
+    // world_buffer_pool: CpuBufferPool<imgui_vs::ty::World>,
     // descriptor_sets_pool: FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
     future: Option<Box<GpuFuture>>,
 }
@@ -93,7 +94,7 @@ impl Graphics {
         (framebuffers, ())
     }
 
-    pub fn new(window: &Arc<Surface<::winit::Window>>, save: &mut ::resource::Save) -> Graphics {
+    pub fn new(window: &Arc<Surface<::winit::Window>>, imgui: &mut ::imgui::ImGui, save: &mut ::resource::Save) -> Graphics {
         let physical = PhysicalDevice::enumerate(window.instance())
             .max_by_key(|device| {
                 if let Some(uuid) = save.vulkan_device_uuid().as_ref() {
@@ -173,27 +174,74 @@ impl Graphics {
                 .unwrap(),
         );
 
-        let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
-        let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
+        let imgui_vs = imgui_vs::Shader::load(device.clone()).expect("failed to create shader module");
+        let imgui_fs = imgui_fs::Shader::load(device.clone()).expect("failed to create shader module");
 
-        let pipeline = Arc::new(
+        let imgui_pipeline = Arc::new(
             vulkano::pipeline::GraphicsPipeline::start()
-                .vertex_input_single_buffer::<Vertex>()
-                .vertex_shader(vs.main_entry_point(), ())
-                .triangle_strip()
+                .vertex_input_single_buffer::<ImGuiVertex>()
+                .vertex_shader(imgui_vs.main_entry_point(), ())
+                .triangle_list()
+                .cull_mode_front()
                 .viewports_dynamic_scissors_irrelevant(1)
-                .fragment_shader(fs.main_entry_point(), ())
+                .fragment_shader(imgui_fs.main_entry_point(), ())
                 .blend_alpha_blending()
                 .render_pass(vulkano::framebuffer::Subpass::from(render_pass.clone(), 0).unwrap())
                 .build(device.clone())
                 .unwrap(),
         );
 
+        let dim = swapchain.dimensions();
+        let imgui_matrix_buffer = ImmutableBuffer::from_data(
+            imgui_vs::ty::Matrix {
+                matrix: [
+                    [2.0 / dim[0] as f32, 0.0, 0.0, 0.0],
+                    [0.0, 2.0 / -(dim[1] as f32), 0.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0],
+                    [-1.0, 1.0, 0.0, 1.0],
+                ],
+            },
+            BufferUsage::uniform_buffer(),
+            queue.clone(),
+        ).unwrap().0;
+
+        let imgui_texture = imgui
+            .prepare_texture(|handle| {
+                ImmutableImage::from_iter(
+                    handle.pixels.iter().cloned(),
+                    Dimensions::Dim2d {
+                        width: handle.width,
+                        height: handle.height,
+                    },
+                    format::R8G8B8A8Unorm,
+                    queue.clone(),
+                )
+            })
+            .unwrap().0;
+
+        let imgui_descriptor_set = Arc::new(PersistentDescriptorSet::start(imgui_pipeline.clone(), 0)
+            .add_buffer(imgui_matrix_buffer).unwrap()
+            .add_sampled_image(
+                imgui_texture,
+                Sampler::new(
+                    device.clone(),
+                    Filter::Nearest,
+                    Filter::Linear,
+                    MipmapMode::Linear,
+                    SamplerAddressMode::MirroredRepeat,
+                    SamplerAddressMode::MirroredRepeat,
+                    SamplerAddressMode::MirroredRepeat,
+                    0.0, 1.0, 0.0, 0.0,
+                ).unwrap(),
+            ).unwrap()
+            .build().unwrap()
+        );
+
         // let view_buffer_pool =
-        //     CpuBufferPool::<vs::ty::View>::new(device.clone(), BufferUsage::uniform_buffer());
+        //     CpuBufferPool::<imgui_vs::ty::View>::new(device.clone(), BufferUsage::uniform_buffer());
 
         // let world_buffer_pool =
-        //     CpuBufferPool::<vs::ty::World>::new(device.clone(), BufferUsage::uniform_buffer());
+        //     CpuBufferPool::<imgui_vs::ty::World>::new(device.clone(), BufferUsage::uniform_buffer());
 
         // let descriptor_sets_pool = FixedSizeDescriptorSetsPool::new(pipeline.clone() as Arc<_>, 0);
 
@@ -203,36 +251,7 @@ impl Graphics {
             &render_pass,
         );
 
-        let glyph_cache = text::GlyphCache::new(::CFG.glyph_width, ::CFG.glyph_height, ::CFG.glyph_scale_tolerance, ::CFG.glyph_position_tolerance);
-        let glyph_cache_pixel_buffer = vec!(0; (::CFG.glyph_width * ::CFG.glyph_height) as usize);
-
-        let (glyph_cache_image, future) = ImmutableImage::from_iter(
-            glyph_cache_pixel_buffer.iter().cloned(),
-            Dimensions::Dim2d { width: ::CFG.glyph_width as u32, height: ::CFG.glyph_height as u32 },
-            Format::R8Unorm,
-            queue.clone(),
-        ).unwrap();
-
-        let glyph_cache_image_sampler = Sampler::new(
-            device.clone(),
-            Filter::Linear,
-            Filter::Linear,
-            MipmapMode::Nearest,
-            SamplerAddressMode::ClampToEdge,
-            SamplerAddressMode::ClampToEdge,
-            SamplerAddressMode::ClampToEdge,
-            0.0, 1.0, 0.0, 0.0,
-        ).unwrap();
-
-        let glyph_cache_image_descriptor_set = Arc::new(
-            PersistentDescriptorSet::start(pipeline.clone(), 0)
-                .add_sampled_image(glyph_cache_image.clone(), glyph_cache_image_sampler.clone())
-                .unwrap()
-                .build()
-                .unwrap()
-        );
-
-        let future = Some(Box::new(future.then_signal_fence_and_flush().unwrap()) as Box<_>);
+        let future = Some(Box::new(now(device.clone())) as Box<_>);
 
         Graphics {
             future,
@@ -240,12 +259,9 @@ impl Graphics {
             queue,
             swapchain,
             render_pass,
-            pipeline,
+            imgui_pipeline,
             framebuffers,
-            glyph_cache,
-            glyph_cache_pixel_buffer,
-            glyph_cache_image_sampler,
-            glyph_cache_image_descriptor_set,
+            imgui_descriptor_set,
 
             // view_buffer_pool,
             // world_buffer_pool,
@@ -289,7 +305,7 @@ impl Graphics {
         self.framebuffers = framebuffers;
     }
 
-    pub fn draw(&mut self, world: &mut World, window: &Arc<Surface<::winit::Window>>) {
+    pub fn draw(&mut self, world: &mut World, window: &Arc<Surface<::winit::Window>>, game_state: Box<::game_state::GameState>) -> Box<::game_state::GameState> {
         self.future.as_mut().unwrap().cleanup_finished();
 
         // On X with Xmonad and intel HD graphics the acquire stay sometimes forever
@@ -309,7 +325,7 @@ impl Graphics {
 
         let (image_num, acquire_future) = next_image.unwrap();
 
-        let command_buffer = self.build_command_buffer(image_num, window.window().hidpi_factor() as f64, world);
+        let (command_buffer, game_state) = self.build_command_buffer(image_num, window.window().hidpi_factor(), world, game_state);
 
         let future = self.future
             .take()
@@ -332,14 +348,19 @@ impl Graphics {
                 self.future = Some(Box::new(vulkano::sync::now(self.device.clone())) as Box<_>);
             }
         }
+        game_state
     }
 
     fn build_command_buffer(
         &mut self,
         image_num: usize,
-        dpi_factor: f64,
+        hidpi_factor: f32,
         world: &mut World,
-    ) -> AutoCommandBuffer<StandardCommandPoolAlloc> {
+        game_state: Box<::game_state::GameState>,
+    ) -> (
+        AutoCommandBuffer<StandardCommandPoolAlloc>,
+        Box<::game_state::GameState>,
+    ) {
 
         let dimensions = self.swapchain.dimensions();
 
@@ -368,263 +389,137 @@ impl Graphics {
         // TODO: Draw world
 
         // Draw UI
+        let mut imgui = world.write_resource::<::resource::ImGuiOption>().take().unwrap();
 
-        let half_win_w = dimensions[0] as f64 / 2.0;
-        let half_win_h = dimensions[1] as f64 / 2.0;
+        let next_game_state;
+        let ref_cell_cmd_builder = RefCell::new(Some(command_buffer_builder));
+        {
+            let ui = imgui.frame(
+                (dimensions[0], dimensions[1]),
+                ((dimensions[0] as f32 * hidpi_factor) as u32, (dimensions[1] as f32 * hidpi_factor) as u32),
+                world.read_resource::<::resource::UpdateTime>().0,
+            );
 
-        // Functions for converting for conrod scalar coords to GL vertex coords (-1.0 to 1.0).
-        let vx = |x: Scalar| (x * dpi_factor / half_win_w) as f32;
-        let vy = |y: Scalar| -(y * dpi_factor / half_win_h) as f32;
+            next_game_state = game_state.update_draw_ui(&ui, world);
 
-        pub fn gamma_srgb_to_linear(c: [f32; 4]) -> [f32; 4] {
-            fn component(f: f32) -> f32 {
-                // Taken from https://github.com/PistonDevelopers/graphics/src/color.rs#L42
-                if f <= 0.04045 {
-                    f / 12.92
-                } else {
-                    ((f + 0.055) / 1.055).powf(2.4)
+            ui.render::<_, ()>(|ui, drawlist| {
+                let mut cmd_builder = ref_cell_cmd_builder.borrow_mut().take().unwrap();
+
+                let vertex_buffer = CpuAccessibleBuffer::from_iter(
+                    self.device.clone(),
+                    BufferUsage::vertex_buffer(),
+                    drawlist.vtx_buffer
+                        .iter()
+                        .map(|vtx| ImGuiVertex::from_im_draw_vert(vtx)),
+                ).unwrap();
+
+                let index_buffer = CpuAccessibleBuffer::from_iter(
+                    self.device.clone(),
+                    BufferUsage::index_buffer(),
+                    drawlist.idx_buffer.iter().cloned(),
+                ).unwrap();
+
+                for cmd in drawlist.cmd_buffer {
+                    let dynamic_state = DynamicState {
+                        viewports: Some(vec![
+                            Viewport {
+                                origin: [0.0, 0.0],
+                                dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+                                depth_range: 0.0..1.0,
+                            },
+                        ]),
+                        // TODO:
+                        // Scissor {
+                        //     origin: [
+                        //         cmd.clip_rect.x as i32,
+                        //         (dimensions[1] - cmd.clip_rect.w) as i32,
+                        //     ],
+                        //     dimensions: [
+                        //         ((cmd.clip_rect.z - cmd.clip_rect.x) * scale_width) as u32,
+                        //         ((cmd.clip_rect.w - cmd.clip_rect.y) * scale_height) as u32,
+                        //     ],
+                        // }
+                        ..DynamicState::none()
+                    };
+
+
+                    cmd_builder = cmd_builder
+                        .draw_indexed(
+                            self.imgui_pipeline.clone(),
+                            screen_dynamic_state.clone(),
+                            vec![vertex_buffer.clone()],
+                            index_buffer.clone(),
+                            self.imgui_descriptor_set.clone(),
+                            (),
+                        )
+                        .unwrap();
                 }
-            }
-            [component(c[0]), component(c[1]), component(c[2]), c[3]]
+                *ref_cell_cmd_builder.borrow_mut() = Some(cmd_builder);
+                Ok(())
+            }).unwrap();
         }
 
-        let owned_primitives = world.read_resource::<::resource::OwnedPrimitives>();
-        let mut walk_primitive = owned_primitives.walk();
-        while let Some(primitive) = walk_primitive.next() {
+        let command_buffer_builder = ref_cell_cmd_builder.borrow_mut().take().unwrap();
 
-            let mut vertices = vec![];
-            match primitive.kind {
-                PrimitiveKind::Rectangle { color } => {
-                    continue;
-                    let color = gamma_srgb_to_linear(color.to_fsa());
-                    let (l, r, b, t) = primitive.rect.l_r_b_t();
-
-                    let v = |x, y| {
-                        Vertex {
-                            position: [vx(x), vy(y)],
-                            tex_coords: [0.0, 0.0],
-                            color: color,
-                            mode: UiMode::Geometry as u32,
-                        }
-                    };
-
-                    let mut push_v = |x, y| vertices.push(v(x, y));
-
-                    // Bottom left triangle.
-                    push_v(l, t);
-                    push_v(r, b);
-                    push_v(l, b);
-
-                    // Top right triangle.
-                    push_v(r, b);
-                    push_v(l, t);
-                    push_v(r, t);
-                },
-                PrimitiveKind::TrianglesSingleColor { color, triangles } => {
-                    continue;
-                    if triangles.is_empty() {
-                        continue;
-                    }
-
-                    let color = gamma_srgb_to_linear(color.into());
-
-                    let v = |p: [Scalar; 2]| {
-                        Vertex {
-                            position: [vx(p[0]), vy(p[1])],
-                            tex_coords: [0.0, 0.0],
-                            color: color,
-                            mode: UiMode::Geometry as u32,
-                        }
-                    };
-
-                    for triangle in triangles {
-                        vertices.push(v(triangle[0]));
-                        vertices.push(v(triangle[1]));
-                        vertices.push(v(triangle[2]));
-                    }
-                },
-                PrimitiveKind::TrianglesMultiColor { triangles } => {
-                    continue;
-                    if triangles.is_empty() {
-                        continue;
-                    }
-
-                    let v = |(p, c): ([Scalar; 2], ::conrod::color::Rgba)| {
-                        Vertex {
-                            position: [vx(p[0]), vy(p[1])],
-                            tex_coords: [0.0, 0.0],
-                            color: gamma_srgb_to_linear(c.into()),
-                            mode: UiMode::Geometry as u32,
-                        }
-                    };
-
-                    for triangle in triangles {
-                        vertices.push(v(triangle[0]));
-                        vertices.push(v(triangle[1]));
-                        vertices.push(v(triangle[2]));
-                    }
-                },
-                PrimitiveKind::Text { color, text, font_id } => {
-                    let positioned_glyphs = text.positioned_glyphs(dpi_factor as f32);
-
-                    // Queue the glyphs to be cached.
-                    for glyph in positioned_glyphs.iter() {
-                        self.glyph_cache.queue_glyph(font_id.index(), glyph.clone());
-                    }
-
-                    let changed = RefCell::new(false);
-                    {
-                        let ref mut glyph_cache_pixel_buffer = self.glyph_cache_pixel_buffer;
-                        self.glyph_cache.cache_queued(|rect, src_data| {
-                            println!("cached");
-                            *changed.borrow_mut() = true;
-                            let width = (rect.max.x - rect.min.x) as usize;
-                            let height = (rect.max.y - rect.min.y) as usize;
-                            let mut dst_index = rect.min.y as usize * ::CFG.glyph_width  as usize + rect.min.x as usize;
-                            let mut src_index = 0;
-
-                            for _ in 0..height {
-                                let dst_slice = &mut glyph_cache_pixel_buffer[dst_index..dst_index+width];
-                                let src_slice = &src_data[src_index..src_index+width];
-                                dst_slice.copy_from_slice(src_slice);
-
-                                dst_index += ::CFG.glyph_width as usize;
-                                src_index += width;
-                            }
-                        }).unwrap();
-                    }
-                    let changed = changed.borrow();
-
-                    if true {
-                    // if *changed {
-                        let (glyph_cache_image, future) = ImmutableImage::from_iter(
-                            self.glyph_cache_pixel_buffer.iter().cloned(),
-                            Dimensions::Dim2d { width: ::CFG.glyph_width as u32, height: ::CFG.glyph_height as u32 },
-                            Format::R8Unorm,
-                            self.queue.clone(),
-                        ).unwrap();
-                        self.future = Some(Box::new(self.future.take().unwrap().join(future)) as Box<_>);
-
-                        self.glyph_cache_image_descriptor_set = Arc::new(
-                            PersistentDescriptorSet::start(self.pipeline.clone(), 0)
-                                .add_sampled_image(glyph_cache_image, self.glyph_cache_image_sampler.clone())
-                                .unwrap()
-                                .build()
-                                .unwrap()
-                        );
-                    }
-
-                    let color = gamma_srgb_to_linear(color.to_fsa());
-
-                    let cache_id = font_id.index();
-
-                    let origin = text::rt::point(0.0, 0.0);
-                    let to_gl_rect = |screen_rect: text::rt::Rect<i32>| text::rt::Rect {
-                        min: origin
-                            + (text::rt::vector(screen_rect.min.x as f32 / dimensions[0] as f32 - 0.5,
-                                          screen_rect.min.y as f32 / dimensions[1] as f32 - 0.5)) * 2.0,
-                        max: origin
-                            + (text::rt::vector(screen_rect.max.x as f32 / dimensions[0] as f32 - 0.5,
-                                          screen_rect.max.y as f32 / dimensions[1] as f32 - 0.5)) * 2.0
-                    };
-
-                    for g in positioned_glyphs {
-                        if let Ok(Some((uv_rect, screen_rect))) = self.glyph_cache.rect_for(cache_id, g) {
-                            let mut gl_rect = to_gl_rect(screen_rect);
-                            let v = |p, t: [f32; 2]| Vertex {
-                                position: p,
-                                tex_coords: [t[0],  t[1]],
-                                color: color,
-                                mode: UiMode::Text as u32,
-                            };
-                            let mut push_v = |p, t| vertices.push(v(p, t));
-                            let t = 0.0;
-                            let i = 0.0;
-                            push_v([gl_rect.min.x-i, gl_rect.max.y+i], [uv_rect.min.x-t, uv_rect.max.y+t]);
-                            push_v([gl_rect.min.x-i, gl_rect.min.y-i], [uv_rect.min.x-t, uv_rect.min.y-t]);
-                            push_v([gl_rect.max.x+i, gl_rect.min.y-i], [uv_rect.max.x+t, uv_rect.min.y-t]);
-
-                            push_v([gl_rect.max.x+i, gl_rect.max.y+i], [uv_rect.max.x+t, uv_rect.max.y+t]);
-                            push_v([gl_rect.max.x+i, gl_rect.min.y-i], [uv_rect.max.x+t, uv_rect.min.y-t]);
-                            push_v([gl_rect.min.x-i, gl_rect.max.y+i], [uv_rect.min.x-t, uv_rect.max.y+t]);
-                        }
-                    }
-                },
-                _ => unreachable!(),
-            }
-
-            let buffer = CpuAccessibleBuffer::from_iter(self.device.clone(), BufferUsage::all(), vertices.into_iter()).unwrap();
-
-            command_buffer_builder = command_buffer_builder.draw(
-                self.pipeline.clone(),
-                screen_dynamic_state.clone(),
-                vec![buffer],
-                (self.glyph_cache_image_descriptor_set.clone()),
-                (),
-            )
-                .unwrap();
-        }
-
-
-        command_buffer_builder
+        let command = command_buffer_builder
             .end_render_pass()
             .unwrap()
             .build()
-            .unwrap()
+            .unwrap();
+
+        *world.write_resource::<::resource::ImGuiOption>() = Some(imgui);
+
+        (command, next_game_state)
     }
 
 }
 
-mod vs {
+mod imgui_vs {
     #[derive(VulkanoShader)]
     #[ty = "vertex"]
     #[src = "
+
 #version 450
 
-layout(location = 0) in vec2 position;
-layout(location = 1) in vec2 tex_coords;
-layout(location = 2) in vec4 color;
-layout(location = 3) in uint mode;
+layout(set = 0, binding = 0) uniform Matrix {
+    mat4 matrix;
+} matrix;
 
-layout(location = 0) out vec2 v_tex_coords;
-layout(location = 1) out vec4 v_color;
-layout(location = 2) flat out uint v_mode;
+layout(location = 0) in vec2 pos;
+layout(location = 1) in vec2 uv;
+layout(location = 2) in vec4 col;
+
+layout(location = 0) out vec2 f_uv;
+layout(location = 1) out vec4 f_color;
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    v_tex_coords = tex_coords;
-    v_color = color;
-    v_mode = mode;
+    f_uv = uv;
+    f_color = col / 255.0;
+    gl_Position = matrix.matrix * vec4(pos.xy, 0, 1);
+    gl_Position.y = - gl_Position.y;
 }
-"]
+    "]
     struct _Dummy;
 }
 
-mod fs {
+mod imgui_fs {
     #[derive(VulkanoShader)]
     #[ty = "fragment"]
     #[src = "
+
 #version 450
 
-layout(location = 0) in vec2 v_tex_coords;
-layout(location = 1) in vec4 v_color;
-layout(location = 2) flat in uint v_mode;
+layout(set = 0, binding = 1) uniform sampler2D tex;
 
-layout(location = 0) out vec4 f_color;
+layout(location = 0) in vec2 f_uv;
+layout(location = 1) in vec4 f_color;
 
-layout(set = 0, binding = 0) uniform sampler2D tex;
+layout(location = 0) out vec4 out_color;
 
 void main() {
-    // Text
-    if (v_mode == uint(0)) {
-        f_color = v_color * texture(tex, v_tex_coords).r;
-
-    // 2D Geometry
-    } else if (v_mode == uint(1)) {
-        f_color = v_color;
-    }
+  out_color = f_color * texture(tex, f_uv.st);
 }
-"]
+    "]
     struct _Dummy;
 }
 
