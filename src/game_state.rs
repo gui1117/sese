@@ -84,7 +84,7 @@ impl GameState for Game {
                 EventType::ButtonPressed(Button::Start, _) => {
                     players_gamepads[free_player] = Some(id);
                 }
-                _ => {}
+                _ => (),
             }
         }
         self
