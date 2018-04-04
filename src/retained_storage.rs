@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::DerefMut;
-use specs::{Join, MaskedStorage, Component, Storage, UnprotectedStorage, Index};
+use specs::{Component, Index, Join, MaskedStorage, Storage, UnprotectedStorage};
 
 pub trait Retained<C> {
     fn retained(&mut self) -> Vec<C>;
@@ -46,7 +46,7 @@ impl<C, T> Retained<C> for RetainedStorage<C, T> {
 impl<C: Clone, T: UnprotectedStorage<C>> UnprotectedStorage<C> for RetainedStorage<C, T> {
     unsafe fn clean<F>(&mut self, f: F)
     where
-        F: Fn(Index) -> bool
+        F: Fn(Index) -> bool,
     {
         self.storage.clean(f)
     }

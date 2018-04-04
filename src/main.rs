@@ -1,32 +1,32 @@
+extern crate alga;
 extern crate app_dirs2;
 #[macro_use]
 extern crate derive_deref;
 extern crate failure;
 extern crate fps_counter;
+extern crate generic_array;
 extern crate gilrs;
 #[macro_use]
 extern crate lazy_static;
 extern crate nalgebra as na;
-extern crate nphysics3d as nphysics;
 extern crate ncollide;
+extern crate nphysics3d as nphysics;
+extern crate pathfinding;
 extern crate png;
 extern crate rand;
 extern crate ron;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate show_message;
 extern crate specs;
+extern crate typenum;
 #[macro_use]
 extern crate vulkano;
 #[macro_use]
 extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
-extern crate alga;
-extern crate show_message;
-extern crate typenum;
-extern crate generic_array;
-extern crate pathfinding;
 
 mod component;
 mod configuration;
@@ -62,8 +62,9 @@ fn main() {
     let instance = {
         let extensions = vulkano_win::required_extensions();
         let info = app_info_from_cargo_toml!();
-        Instance::new(Some(&info), &extensions, None)
-            .ok_or_show(|e| format!("Failed to create Vulkan instance.\nPlease see if you graphic cards support Vulkan and if so update your drivers\n\n{}", e))
+        Instance::new(Some(&info), &extensions, None).ok_or_show(|e| {
+            format!("Failed to create Vulkan instance.\nPlease see if you graphic cards support Vulkan and if so update your drivers\n\n{}", e)
+        })
     };
 
     let mut events_loop = winit::EventsLoop::new();
@@ -129,8 +130,9 @@ fn main() {
                     event: winit::WindowEvent::Focused(false),
                     ..
                 } => {
-                    try_multiple_time!(window.window().set_cursor_state(winit::CursorState::Normal))
-                        .ok_or_show(|e| format!("Failed to grab cursor: {}", e));
+                    try_multiple_time!(
+                        window.window().set_cursor_state(winit::CursorState::Normal)
+                    ).ok_or_show(|e| format!("Failed to grab cursor: {}", e));
                 }
                 winit::Event::WindowEvent {
                     event: ::winit::WindowEvent::Closed,

@@ -1,19 +1,19 @@
 use vulkano::device::{Device, DeviceExtensions, Queue};
-use vulkano::swapchain::{self, Swapchain, SwapchainCreationError, Surface};
+use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError};
 use vulkano::sampler::Sampler;
 use vulkano::image::{Dimensions, ImageUsage, ImmutableImage, MipmapsCount};
 use vulkano::image::swapchain::SwapchainImage;
-use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer, CpuAccessibleBuffer};
+use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool, ImmutableBuffer};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, LayoutAttachmentDescription,
                            LayoutPassDependencyDescription, LayoutPassDescription, LoadOp,
-                           RenderPassDesc,
-                           RenderPassDescClearValues, StoreOp, RenderPass};
+                           RenderPass, RenderPassDesc, RenderPassDescClearValues, StoreOp};
 use vulkano::pipeline::GraphicsPipelineAbstract;
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::descriptor::descriptor_set::{DescriptorSet, FixedSizeDescriptorSetsPool,
                                           PersistentDescriptorSet};
 use vulkano::command_buffer::pool::standard::StandardCommandPoolAlloc;
-use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, DynamicState, CommandBuffer};
+use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, CommandBuffer,
+                              DynamicState};
 use vulkano::instance::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::sync::{now, GpuFuture};
 use vulkano::image::ImageLayout;
@@ -22,7 +22,7 @@ use vulkano;
 use alga::general::SubsetOf;
 use std::sync::Arc;
 use std::time::Duration;
-use specs::{World, Join};
+use specs::{Join, World};
 use show_message::{OkOrShow, SomeOrShow};
 use rand::distributions::{IndependentSample, Range};
 
@@ -41,10 +41,12 @@ pub struct Graphics {
     pub pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
     pub framebuffers: Vec<Arc<FramebufferAbstract + Sync + Send>>,
 
-    pub camera_descriptor_sets_pool: FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
+    pub camera_descriptor_sets_pool:
+        FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
     pub view_buffer_pool: CpuBufferPool<vs::ty::View>,
     pub perspective_buffer_pool: CpuBufferPool<vs::ty::Perspective>,
-    pub model_descriptor_sets_pool: FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
+    pub model_descriptor_sets_pool:
+        FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
     pub model_buffer_pool: CpuBufferPool<vs::ty::Model>,
     pub cuboid_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
@@ -58,10 +60,7 @@ impl Graphics {
     pub fn framebuffers_and_descriptors(
         images: &Vec<Arc<SwapchainImage<::winit::Window>>>,
         render_pass: &Arc<RenderPass<CustomRenderPassDesc>>,
-    ) -> (
-        Vec<Arc<FramebufferAbstract + Sync + Send>>,
-        (),
-    ){
+    ) -> (Vec<Arc<FramebufferAbstract + Sync + Send>>, ()) {
         let framebuffers = images
             .iter()
             .map(|image| {
@@ -119,7 +118,8 @@ impl Graphics {
             ).ok_or_show(|e| format!("Failed to create vulkan device: {}", e))
         };
 
-        let queue = queues.next()
+        let queue = queues
+            .next()
             .some_or_show("Failed to find queue with supported features");
 
         let (swapchain, images) = {
@@ -176,70 +176,170 @@ impl Graphics {
         ) as Arc<GraphicsPipelineAbstract + Send + Sync>;
 
         let camera_descriptor_sets_pool = FixedSizeDescriptorSetsPool::new(pipeline.clone(), 0);
-        let view_buffer_pool = CpuBufferPool::<vs::ty::View>::new(device.clone(), BufferUsage::uniform_buffer());
-        let perspective_buffer_pool = CpuBufferPool::<vs::ty::Perspective>::new(device.clone(), BufferUsage::uniform_buffer());
+        let view_buffer_pool =
+            CpuBufferPool::<vs::ty::View>::new(device.clone(), BufferUsage::uniform_buffer());
+        let perspective_buffer_pool = CpuBufferPool::<vs::ty::Perspective>::new(
+            device.clone(),
+            BufferUsage::uniform_buffer(),
+        );
 
         let model_descriptor_sets_pool = FixedSizeDescriptorSetsPool::new(pipeline.clone(), 1);
-        let model_buffer_pool = CpuBufferPool::<vs::ty::Model>::new(device.clone(), BufferUsage::uniform_buffer());
+        let model_buffer_pool =
+            CpuBufferPool::<vs::ty::Model>::new(device.clone(), BufferUsage::uniform_buffer());
 
         let (cuboid_vertex_buffer, _future) = ImmutableBuffer::from_iter(
             [
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 1.0] },
-
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 1.0] },
-
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 0.0] },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0] },
-
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0] },
-
-                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0] },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [1.0, 0.0] },
-
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [1.0, 0.0] },
-
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [0.0, 0.0] },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0] },
-
-                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0] },
-
-                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0] },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0] },
-
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0] },
-
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0] },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 0.0] },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0] },
-
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0] },
-            ].iter().cloned(),
+                Vertex {
+                    position: [1.0, -1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, -1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, -1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, 1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, 1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, 1.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, -1.0],
+                    tex_coords: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, 1.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, -1.0],
+                    tex_coords: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, 1.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, -1.0],
+                    tex_coords: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, 1.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, -1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, -1.0],
+                    tex_coords: [0.0, 0.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0, 1.0],
+                    tex_coords: [0.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, 1.0],
+                    tex_coords: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0, -1.0],
+                    tex_coords: [1.0, 0.0],
+                },
+            ].iter()
+                .cloned(),
             BufferUsage::vertex_buffer(),
             queue.clone(),
         ).unwrap();
 
-        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(
-            &images,
-            &render_pass,
-        );
+        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&images, &render_pass);
 
         let (unlocal_texture, _future) = {
             let dimensions = Dimensions::Dim2d {
@@ -253,9 +353,8 @@ impl Graphics {
             let source = CpuAccessibleBuffer::from_iter(
                 queue.device().clone(),
                 BufferUsage::transfer_source(),
-                (0..dimensions.width()*dimensions.height()).map(|_| {
-                    (range.ind_sample(&mut rng).powi(2) * 255.0).round() as u8
-                }),
+                (0..dimensions.width() * dimensions.height())
+                    .map(|_| (range.ind_sample(&mut rng).powi(2) * 255.0).round() as u8),
             ).unwrap();
 
             let usage = ImageUsage {
@@ -272,12 +371,14 @@ impl Graphics {
                 MipmapsCount::Log2,
                 usage,
                 layout,
-                device.active_queue_families()
+                device.active_queue_families(),
             ).unwrap();
 
-            let cb = AutoCommandBufferBuilder::new(device.clone(), queue.family()).unwrap()
+            let cb = AutoCommandBufferBuilder::new(device.clone(), queue.family())
+                .unwrap()
                 .copy_buffer_to_image_dimensions(
-                    source, init,
+                    source,
+                    init,
                     [0, 0, 0],
                     dimensions.width_height_depth(),
                     0,
@@ -297,7 +398,10 @@ impl Graphics {
         };
 
         let unlocal_texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
-            .add_sampled_image(unlocal_texture, Sampler::simple_repeat_linear(device.clone()))
+            .add_sampled_image(
+                unlocal_texture,
+                Sampler::simple_repeat_linear(device.clone()),
+            )
             .unwrap()
             .build()
             .unwrap();
@@ -354,14 +458,16 @@ impl Graphics {
         let (swapchain, images) = recreate.unwrap();
         self.swapchain = swapchain;
 
-        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(
-            &images,
-            &self.render_pass,
-        );
+        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&images, &self.render_pass);
         self.framebuffers = framebuffers;
     }
 
-    pub fn draw(&mut self, world: &mut World, window: &Arc<Surface<::winit::Window>>, game_state: Box<::game_state::GameState>) -> Box<::game_state::GameState> {
+    pub fn draw(
+        &mut self,
+        world: &mut World,
+        window: &Arc<Surface<::winit::Window>>,
+        game_state: Box<::game_state::GameState>,
+    ) -> Box<::game_state::GameState> {
         self.future.as_mut().unwrap().cleanup_finished();
 
         // On X with Xmonad and intel HD graphics the acquire stay sometimes forever
@@ -416,7 +522,6 @@ impl Graphics {
         AutoCommandBuffer<StandardCommandPoolAlloc>,
         Box<::game_state::GameState>,
     ) {
-
         let dimensions = self.swapchain.dimensions();
 
         let screen_dynamic_state = DynamicState {
@@ -449,7 +554,8 @@ impl Graphics {
             let physic_bodies = world.read::<::component::PhysicBody>();
             let players = world.read::<::component::Player>();
 
-            let player_pos = (&players, &physic_bodies).join()
+            let player_pos = (&players, &physic_bodies)
+                .join()
                 .next()
                 .map(|(_, body)| body.get(&physic_world).position())
                 .unwrap();
@@ -457,33 +563,43 @@ impl Graphics {
             let view_trans: ::na::Transform3<f32> = ::na::Similarity3::look_at_rh(
                 &::na::Point3::from_coordinates(
                     player_pos.translation.vector
-                    + player_pos.rotation * ::na::Vector3::new(-2.0, 0.0, 0.5)
+                        + player_pos.rotation * ::na::Vector3::new(-2.0, 0.0, 0.5),
                 ),
                 &::na::Point3::from_coordinates(
                     player_pos.translation.vector
-                    + player_pos.rotation * ::na::Vector3::new(0.0, 0.0, 0.5)
+                        + player_pos.rotation * ::na::Vector3::new(0.0, 0.0, 0.5),
                 ),
                 &(player_pos.rotation * ::na::Vector3::z()),
                 1.0,
             ).to_superset();
 
-            let view = self.view_buffer_pool.next(vs::ty::View {
-                view: view_trans.unwrap().into(),
-            }).unwrap();
+            let view = self.view_buffer_pool
+                .next(vs::ty::View {
+                    view: view_trans.unwrap().into(),
+                })
+                .unwrap();
 
-            let perspective = self.perspective_buffer_pool.next(vs::ty::Perspective {
-                perspective: ::na::Perspective3::new(
+            let perspective = self.perspective_buffer_pool
+                .next(vs::ty::Perspective {
+                    perspective: ::na::Perspective3::new(
                         dimensions[0] as f32 / dimensions[1] as f32,
                         ::std::f32::consts::FRAC_PI_3,
                         0.1,
                         100.0,
-                    ).unwrap().into(),
-            }).unwrap();
+                    ).unwrap()
+                        .into(),
+                })
+                .unwrap();
 
-            let camera_descriptor_set = Arc::new(self.camera_descriptor_sets_pool.next()
-                .add_buffer(perspective).unwrap()
-                .add_buffer(view).unwrap()
-                .build().unwrap()
+            let camera_descriptor_set = Arc::new(
+                self.camera_descriptor_sets_pool
+                    .next()
+                    .add_buffer(perspective)
+                    .unwrap()
+                    .add_buffer(view)
+                    .unwrap()
+                    .build()
+                    .unwrap(),
             );
 
             for body in physic_bodies.join() {
@@ -491,33 +607,42 @@ impl Graphics {
                 let shape = body.shape();
                 if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
                     // TODO
-                } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>() {
+                } else if let Some(shape) =
+                    shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>()
+                {
                     let radius = shape.half_extents();
-                    let primitive_trans = ::na::Matrix4::from_diagonal(
-                        &::na::Vector4::new(
-                            radius[0],
-                            radius[1],
-                            radius[2],
-                            1.0,
-                        ),
-                    );
+                    let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                        radius[0],
+                        radius[1],
+                        radius[2],
+                        1.0,
+                    ));
 
                     let position: ::na::Transform3<f32> = body.position().to_superset();
 
-                    let model = self.model_buffer_pool.next(vs::ty::Model {
-                        model: (position.unwrap() * primitive_trans).into(),
-                    }).unwrap();
+                    let model = self.model_buffer_pool
+                        .next(vs::ty::Model {
+                            model: (position.unwrap() * primitive_trans).into(),
+                        })
+                        .unwrap();
 
-                    let model_descriptor_set = self.model_descriptor_sets_pool.next()
-                        .add_buffer(model).unwrap()
-                        .build().unwrap();
+                    let model_descriptor_set = self.model_descriptor_sets_pool
+                        .next()
+                        .add_buffer(model)
+                        .unwrap()
+                        .build()
+                        .unwrap();
 
                     command_buffer_builder = command_buffer_builder
                         .draw(
                             self.pipeline.clone(),
                             screen_dynamic_state.clone(),
                             vec![self.cuboid_vertex_buffer.clone()],
-                            (camera_descriptor_set.clone(), model_descriptor_set, self.unlocal_texture_descriptor_set.clone()),
+                            (
+                                camera_descriptor_set.clone(),
+                                model_descriptor_set,
+                                self.unlocal_texture_descriptor_set.clone(),
+                            ),
                             (),
                         )
                         .unwrap();
@@ -536,7 +661,6 @@ impl Graphics {
 
         (command, next_game_state)
     }
-
 }
 
 mod vs {

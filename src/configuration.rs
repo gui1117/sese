@@ -18,6 +18,5 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    fn check(&self) {
-    }
+    fn check(&self) {}
 }

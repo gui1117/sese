@@ -36,12 +36,7 @@ impl PhysicBody {
     ) {
         body.set_user_data(Some(Box::new(entity)));
         let bodyhandle = physic_world.add_rigid_body(body);
-        bodies.insert(
-            entity,
-            PhysicBody {
-                handle: bodyhandle,
-            },
-        );
+        bodies.insert(entity, PhysicBody { handle: bodyhandle });
     }
 
     #[inline]

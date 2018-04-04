@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use app_dirs2::{AppInfo, app_root, AppDataType};
+use app_dirs2::{app_root, AppDataType, AppInfo};
 use show_message::OkOrShow;
 
 pub type PhysicWorld = ::nphysics::world::World<f32>;
@@ -9,7 +9,10 @@ pub type PhysicWorld = ::nphysics::world::World<f32>;
 #[derive(Deref, DerefMut)]
 pub struct UpdateTime(pub f32);
 
-const APP_INFO: AppInfo = AppInfo { name: "HyperZen Training", author: "thiolliere" };
+const APP_INFO: AppInfo = AppInfo {
+    name: "HyperZen Training",
+    author: "thiolliere",
+};
 const FILENAME: &str = "save.ron";
 
 lazy_static! {
@@ -28,7 +31,8 @@ pub struct Save {
 
 impl Save {
     pub fn new() -> Self {
-        File::open(SAVE_PATH.as_path()).ok()
+        File::open(SAVE_PATH.as_path())
+            .ok()
             .and_then(|file| ::ron::de::from_reader(file).ok())
             .unwrap_or(Save {
                 fullscreen: true,
@@ -42,7 +46,10 @@ impl Save {
 
     /// Return if changed
     pub fn set_vulkan_device_uuid_lazy(&mut self, uuid: &[u8; 16]) -> bool {
-        if self.vulkan_device_uuid.map(|saved_uuid| *uuid != saved_uuid).unwrap_or(true) {
+        if self.vulkan_device_uuid
+            .map(|saved_uuid| *uuid != saved_uuid)
+            .unwrap_or(true)
+        {
             self.vulkan_device_uuid = Some(uuid.clone());
             self.save();
             true
@@ -53,9 +60,19 @@ impl Save {
 
     pub fn save(&self) {
         let string = ::ron::ser::to_string(&self).unwrap();
-        let mut file = File::create(SAVE_PATH.as_path())
-            .ok_or_show(|e| format!("Failed to create save file at {}: {}", SAVE_PATH.display(), e));
-        file.write_all(string.as_bytes())
-            .ok_or_show(|e| format!("Failed to write to save file {}: {}", SAVE_PATH.display(), e));
+        let mut file = File::create(SAVE_PATH.as_path()).ok_or_show(|e| {
+            format!(
+                "Failed to create save file at {}: {}",
+                SAVE_PATH.display(),
+                e
+            )
+        });
+        file.write_all(string.as_bytes()).ok_or_show(|e| {
+            format!(
+                "Failed to write to save file {}: {}",
+                SAVE_PATH.display(),
+                e
+            )
+        });
     }
 }
