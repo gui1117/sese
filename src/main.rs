@@ -33,13 +33,15 @@ extern crate pathfinding;
 
 mod component;
 mod configuration;
-mod maze;
+pub mod maze;
 mod resource;
 #[macro_use]
 mod util;
 mod game_state;
 mod graphics;
 mod retained_storage;
+mod level;
+mod entity;
 
 pub use configuration::CFG;
 
@@ -54,6 +56,7 @@ use std::thread;
 use specs::{DispatcherBuilder, World, Join};
 
 fn main() {
+    ::std::env::set_var("WINIT_UNIX_BACKEND", "x11");
     let mut save = ::resource::Save::new();
 
     let mut imgui = ::imgui::ImGui::init();
@@ -86,7 +89,8 @@ fn main() {
     };
 
     let mut world = World::new();
-    world.register::<::component::RigidBody>();
+    world.register::<::component::PhysicBody>();
+    world.register::<::component::Player>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
     world.add_resource(Some(imgui));
@@ -106,7 +110,13 @@ fn main() {
 
     let mut game_state = Box::new(game_state::Game) as Box<GameState>;
 
-    // TODO: load map
+    ::level::LevelBuilder {
+        half_size: 3,
+        x_shift: false,
+        y_shift: false,
+        z_shift: false,
+        percent: 10.0,
+    }.build(&mut world);
 
     'main_loop: loop {
         // Parse events
@@ -121,9 +131,15 @@ fn main() {
                     event: winit::WindowEvent::Focused(true),
                     ..
                 } => {
-                    try_multiple_time!(window.window().set_cursor_state(winit::CursorState::Normal))
-                        .ok_or_show(|e| format!("Failed to reset cursor: {}", e));
                     try_multiple_time!(window.window().set_cursor_state(winit::CursorState::Grab))
+                        .ok_or_show(|e| format!("Failed to grab cursor: {}", e));
+                }
+                // FIXME: this should be in winit I think
+                winit::Event::WindowEvent {
+                    event: winit::WindowEvent::Focused(false),
+                    ..
+                } => {
+                    try_multiple_time!(window.window().set_cursor_state(winit::CursorState::Normal))
                         .ok_or_show(|e| format!("Failed to grab cursor: {}", e));
                 }
                 winit::Event::WindowEvent {
@@ -164,7 +180,7 @@ fn main() {
         world.maintain();
         {
             let mut physic_world = world.write_resource::<::resource::PhysicWorld>();
-            for body in world.write::<::component::RigidBody>().retained() {
+            for body in world.write::<::component::PhysicBody>().retained() {
                 physic_world.remove_rigid_body(body.handle());
             }
         }

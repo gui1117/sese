@@ -29,10 +29,6 @@ pub struct Game;
 
 impl GameState for Game {
     fn update_draw_ui(self: Box<Self>, ui: &::imgui::Ui, world: &mut World) -> Box<GameState> {
-        ui.window(im_str!("Hello"))
-            .build(|| {
-            });
-
         self
     }
 

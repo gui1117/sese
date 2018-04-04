@@ -2,17 +2,23 @@ use retained_storage::RetainedStorage;
 use std::sync::Arc;
 use std::any::Any;
 
+#[derive(Default)]
+pub struct Player;
+impl ::specs::Component for Player {
+    type Storage = ::specs::NullStorage<Self>;
+}
+
 // Rigid body handle and whereas it has been deleted
 #[derive(Clone)]
-pub struct RigidBody {
+pub struct PhysicBody {
     handle: usize,
 }
 
-impl ::specs::Component for RigidBody {
+impl ::specs::Component for PhysicBody {
     type Storage = RetainedStorage<Self, ::specs::VecStorage<Self>>;
 }
 
-impl RigidBody {
+impl PhysicBody {
     pub fn handle(&self) -> usize {
         self.handle
     }
@@ -26,14 +32,14 @@ impl RigidBody {
     pub fn add<'a>(
         entity: ::specs::Entity,
         mut body: ::nphysics::object::RigidBody<f32>,
-        bodies: &mut ::specs::WriteStorage<'a, ::component::RigidBody>,
+        bodies: &mut ::specs::WriteStorage<'a, ::component::PhysicBody>,
         physic_world: &mut ::specs::FetchMut<'a, ::resource::PhysicWorld>,
     ) {
         body.set_user_data(Some(Box::new(entity)));
         let bodyhandle = physic_world.add_rigid_body(body);
         bodies.insert(
             entity,
-            RigidBody {
+            PhysicBody {
                 handle: bodyhandle,
             },
         );
