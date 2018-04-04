@@ -5,6 +5,8 @@ use app_dirs2::{app_root, AppDataType, AppInfo};
 use show_message::OkOrShow;
 
 pub type PhysicWorld = ::nphysics::world::World<f32>;
+pub type PlayersGamepads = [Option<usize>; 3];
+pub type PlayersEntities = [Option<::specs::Entity>; 3];
 
 #[derive(Deref, DerefMut)]
 pub struct UpdateTime(pub f32);

@@ -1,6 +1,15 @@
 use retained_storage::RetainedStorage;
 use std::any::Any;
 
+pub struct FlightControl {
+    pub x_direction: f32,
+    pub y_direction: f32,
+    pub power: f32,
+}
+impl ::specs::Component for FlightControl {
+    type Storage = ::specs::VecStorage<Self>;
+}
+
 #[derive(Default)]
 pub struct Player;
 impl ::specs::Component for Player {

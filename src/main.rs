@@ -115,7 +115,6 @@ fn main() {
             evs.push(ev);
         });
         for ev in evs {
-            println!("{:?}", ev);
             match ev {
                 // FIXME: this should be in winit I think
                 winit::Event::WindowEvent {
@@ -145,9 +144,8 @@ fn main() {
             game_state = game_state.winit_event(ev, &mut world);
         }
         while let Some(ev) = gilrs.next_event() {
-            println!("{:?}", ev);
             gilrs.update(&ev);
-            game_state = game_state.gilrs_event(ev.event, &mut world);
+            game_state = game_state.gilrs_event(ev.id, ev.event, &mut world);
         }
         for (id, gamepad) in gilrs.gamepads() {
             game_state = game_state.gilrs_gamepad_state(id, gamepad, &mut world);
