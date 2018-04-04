@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::path::PathBuf;
 
 const FILENAME: &str = "configuration.ron";
 

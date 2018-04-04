@@ -2,13 +2,12 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use app_dirs2::{AppInfo, app_root, AppDataType};
-use show_message::{OkOrShow, SomeOrShow};
+use show_message::OkOrShow;
 
 pub type PhysicWorld = ::nphysics::world::World<f32>;
 
 #[derive(Deref, DerefMut)]
 pub struct UpdateTime(pub f32);
-pub type ImGuiOption = Option<::imgui::ImGui>;
 
 const APP_INFO: AppInfo = AppInfo { name: "HyperZen Training", author: "thiolliere" };
 const FILENAME: &str = "save.ron";

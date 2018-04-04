@@ -1,7 +1,6 @@
 extern crate app_dirs2;
 #[macro_use]
 extern crate derive_deref;
-#[macro_use]
 extern crate failure;
 extern crate fps_counter;
 extern crate gilrs;
@@ -25,8 +24,6 @@ extern crate vulkano_win;
 extern crate winit;
 extern crate alga;
 extern crate show_message;
-#[macro_use]
-extern crate imgui;
 extern crate typenum;
 extern crate generic_array;
 extern crate pathfinding;
@@ -53,13 +50,11 @@ use vulkano::instance::Instance;
 use std::time::Duration;
 use std::time::Instant;
 use std::thread;
-use specs::{DispatcherBuilder, World, Join};
+use specs::{DispatcherBuilder, World};
 
 fn main() {
     ::std::env::set_var("WINIT_UNIX_BACKEND", "x11");
     let mut save = ::resource::Save::new();
-
-    let mut imgui = ::imgui::ImGui::init();
 
     let mut gilrs = gilrs::Gilrs::new()
         .ok_or_show(|e| format!("Failed to initialize gilrs: {}\n\n{:#?}", e, e));
@@ -81,19 +76,13 @@ fn main() {
         .ok_or_show(|e| format!("Failed to grab cursor: {}", e));
     window.window().set_cursor(winit::MouseCursor::NoneCursor);
 
-    let mut graphics = graphics::Graphics::new(&window, &mut imgui, &mut save);
-
-    let dimensions = {
-        let d = graphics.swapchain.dimensions();
-        [d[0] as f64, d[1] as f64]
-    };
+    let mut graphics = graphics::Graphics::new(&window, &mut save);
 
     let mut world = World::new();
     world.register::<::component::PhysicBody>();
     world.register::<::component::Player>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
-    world.add_resource(Some(imgui));
     world.maintain();
 
     let mut update_dispatcher = DispatcherBuilder::new()
@@ -125,6 +114,7 @@ fn main() {
             evs.push(ev);
         });
         for ev in evs {
+            println!("{:?}", ev);
             match ev {
                 // FIXME: this should be in winit I think
                 winit::Event::WindowEvent {
@@ -153,6 +143,7 @@ fn main() {
             game_state = game_state.winit_event(ev, &mut world);
         }
         while let Some(ev) = gilrs.next_event() {
+            println!("{:?}", ev);
             gilrs.update(&ev);
             game_state = game_state.gilrs_event(ev.event, &mut world);
         }

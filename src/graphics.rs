@@ -1,38 +1,30 @@
 use vulkano::device::{Device, DeviceExtensions, Queue};
-use vulkano::pipeline::GraphicsPipeline;
-use vulkano::pipeline::vertex::SingleBufferDefinition;
-use vulkano::descriptor::PipelineLayoutAbstract;
 use vulkano::swapchain::{self, Swapchain, SwapchainCreationError, Surface};
-use vulkano::sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode};
-use vulkano::image::{AttachmentImage, Dimensions, ImageUsage, ImmutableImage, ImageAccess, StorageImage, MipmapsCount};
+use vulkano::sampler::Sampler;
+use vulkano::image::{Dimensions, ImageUsage, ImmutableImage, MipmapsCount};
 use vulkano::image::swapchain::SwapchainImage;
 use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer, CpuAccessibleBuffer};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, LayoutAttachmentDescription,
                            LayoutPassDependencyDescription, LayoutPassDescription, LoadOp,
-                           RenderPassAbstract, RenderPassDesc,
+                           RenderPassDesc,
                            RenderPassDescClearValues, StoreOp, RenderPass};
 use vulkano::pipeline::GraphicsPipelineAbstract;
-use vulkano::pipeline::viewport::{Viewport, Scissor};
-use vulkano::descriptor::descriptor_set::{DescriptorSet, DescriptorSetDesc, FixedSizeDescriptorSetsPool,
+use vulkano::pipeline::viewport::Viewport;
+use vulkano::descriptor::descriptor_set::{DescriptorSet, FixedSizeDescriptorSetsPool,
                                           PersistentDescriptorSet};
 use vulkano::command_buffer::pool::standard::StandardCommandPoolAlloc;
 use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, DynamicState, CommandBuffer};
 use vulkano::instance::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::sync::{now, GpuFuture};
 use vulkano::image::ImageLayout;
-use vulkano::format::{self, ClearValue, Format};
+use vulkano::format::{ClearValue, Format};
 use vulkano;
-use ncollide::shape;
 use alga::general::SubsetOf;
 use std::sync::Arc;
-use std::fs::File;
 use std::time::Duration;
-use std::f32::consts::PI;
-use std::cell::RefCell;
 use specs::{World, Join};
 use show_message::{OkOrShow, SomeOrShow};
 use rand::distributions::{IndependentSample, Range};
-use rand::{thread_rng, Rng};
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
@@ -41,37 +33,13 @@ pub struct Vertex {
 }
 impl_vertex!(Vertex, position, tex_coords);
 
-#[derive(Debug, Clone)]
-pub struct ImGuiVertex {
-    pos: [f32; 2],
-    uv: [f32; 2],
-    col: [f32; 4],
-}
-impl_vertex!(ImGuiVertex, pos, uv, col);
-impl ImGuiVertex {
-    fn from_im_draw_vert(vertex: &::imgui::ImDrawVert) -> Self {
-        let r = vertex.col as u8 as f32;
-        let g = (vertex.col >> 8) as u8 as f32;
-        let b = (vertex.col >> 16) as u8 as f32;
-        let a = (vertex.col >> 24) as u8 as f32;
-        ImGuiVertex {
-            pos: [vertex.pos.x, vertex.pos.y],
-            uv: [vertex.uv.x, vertex.uv.y],
-            col: [r, g, b, a],
-        }
-    }
-}
-
 pub struct Graphics {
     pub queue: Arc<Queue>,
     pub device: Arc<Device>,
     pub swapchain: Arc<Swapchain<::winit::Window>>,
     pub render_pass: Arc<RenderPass<CustomRenderPassDesc>>,
-    pub imgui_pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
     pub pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
     pub framebuffers: Vec<Arc<FramebufferAbstract + Sync + Send>>,
-
-    pub imgui_descriptor_set: Arc<DescriptorSet + Sync + Send>,
 
     pub camera_descriptor_sets_pool: FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
     pub view_buffer_pool: CpuBufferPool<vs::ty::View>,
@@ -88,15 +56,12 @@ pub struct Graphics {
 // TODO: return result failure ?
 impl Graphics {
     pub fn framebuffers_and_descriptors(
-        device: &Arc<Device>,
         images: &Vec<Arc<SwapchainImage<::winit::Window>>>,
         render_pass: &Arc<RenderPass<CustomRenderPassDesc>>,
     ) -> (
         Vec<Arc<FramebufferAbstract + Sync + Send>>,
         (),
     ){
-        let dimensions = images[0].dimensions().width_height();
-
         let framebuffers = images
             .iter()
             .map(|image| {
@@ -113,7 +78,7 @@ impl Graphics {
         (framebuffers, ())
     }
 
-    pub fn new(window: &Arc<Surface<::winit::Window>>, imgui: &mut ::imgui::ImGui, save: &mut ::resource::Save) -> Graphics {
+    pub fn new(window: &Arc<Surface<::winit::Window>>, save: &mut ::resource::Save) -> Graphics {
         let physical = PhysicalDevice::enumerate(window.instance())
             .max_by_key(|device| {
                 if let Some(uuid) = save.vulkan_device_uuid().as_ref() {
@@ -193,24 +158,8 @@ impl Graphics {
                 .unwrap(),
         );
 
-        let imgui_vs = imgui_vs::Shader::load(device.clone()).expect("failed to create shader module");
-        let imgui_fs = imgui_fs::Shader::load(device.clone()).expect("failed to create shader module");
         let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
         let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
-
-        let imgui_pipeline = Arc::new(
-            vulkano::pipeline::GraphicsPipeline::start()
-                .vertex_input_single_buffer::<ImGuiVertex>()
-                .vertex_shader(imgui_vs.main_entry_point(), ())
-                .triangle_list()
-                .cull_mode_front()
-                .viewports_dynamic_scissors_irrelevant(1)
-                .fragment_shader(imgui_fs.main_entry_point(), ())
-                .blend_alpha_blending()
-                .render_pass(vulkano::framebuffer::Subpass::from(render_pass.clone(), 0).unwrap())
-                .build(device.clone())
-                .unwrap(),
-        );
 
         let pipeline = Arc::new(
             vulkano::pipeline::GraphicsPipeline::start()
@@ -225,52 +174,6 @@ impl Graphics {
                 .build(device.clone())
                 .unwrap(),
         ) as Arc<GraphicsPipelineAbstract + Send + Sync>;
-
-        let dim = swapchain.dimensions();
-        let imgui_matrix_buffer = ImmutableBuffer::from_data(
-            imgui_vs::ty::Matrix {
-                matrix: [
-                    [2.0 / dim[0] as f32, 0.0, 0.0, 0.0],
-                    [0.0, 2.0 / -(dim[1] as f32), 0.0, 0.0],
-                    [0.0, 0.0, -1.0, 0.0],
-                    [-1.0, 1.0, 0.0, 1.0],
-                ],
-            },
-            BufferUsage::uniform_buffer(),
-            queue.clone(),
-        ).unwrap().0;
-
-        let imgui_texture = imgui
-            .prepare_texture(|handle| {
-                ImmutableImage::from_iter(
-                    handle.pixels.iter().cloned(),
-                    Dimensions::Dim2d {
-                        width: handle.width,
-                        height: handle.height,
-                    },
-                    format::R8G8B8A8Unorm,
-                    queue.clone(),
-                )
-            })
-            .unwrap().0;
-
-        let imgui_descriptor_set = Arc::new(PersistentDescriptorSet::start(imgui_pipeline.clone(), 0)
-            .add_buffer(imgui_matrix_buffer).unwrap()
-            .add_sampled_image(
-                imgui_texture,
-                Sampler::new(
-                    device.clone(),
-                    Filter::Nearest,
-                    Filter::Linear,
-                    MipmapMode::Linear,
-                    SamplerAddressMode::MirroredRepeat,
-                    SamplerAddressMode::MirroredRepeat,
-                    SamplerAddressMode::MirroredRepeat,
-                    0.0, 1.0, 0.0, 0.0,
-                ).unwrap(),
-            ).unwrap()
-            .build().unwrap()
-        );
 
         let camera_descriptor_sets_pool = FixedSizeDescriptorSetsPool::new(pipeline.clone(), 0);
         let view_buffer_pool = CpuBufferPool::<vs::ty::View>::new(device.clone(), BufferUsage::uniform_buffer());
@@ -334,12 +237,11 @@ impl Graphics {
         ).unwrap();
 
         let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(
-            &device,
             &images,
             &render_pass,
         );
 
-        let (unlocal_texture, future) = {
+        let (unlocal_texture, _future) = {
             let dimensions = Dimensions::Dim2d {
                 width: ::CFG.unlocal_texture_size,
                 height: ::CFG.unlocal_texture_size,
@@ -410,9 +312,7 @@ impl Graphics {
             queue,
             swapchain,
             render_pass,
-            imgui_pipeline,
             framebuffers,
-            imgui_descriptor_set,
             pipeline,
 
             camera_descriptor_sets_pool,
@@ -455,7 +355,6 @@ impl Graphics {
         self.swapchain = swapchain;
 
         let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(
-            &self.device,
             &images,
             &self.render_pass,
         );
@@ -482,7 +381,7 @@ impl Graphics {
 
         let (image_num, acquire_future) = next_image.unwrap();
 
-        let (command_buffer, game_state) = self.build_command_buffer(image_num, window.window().hidpi_factor(), world, game_state);
+        let (command_buffer, game_state) = self.build_command_buffer(image_num, world, game_state);
 
         let future = self.future
             .take()
@@ -511,7 +410,6 @@ impl Graphics {
     fn build_command_buffer(
         &mut self,
         image_num: usize,
-        hidpi_factor: f32,
         world: &mut World,
         game_state: Box<::game_state::GameState>,
     ) -> (
@@ -591,7 +489,7 @@ impl Graphics {
             for body in physic_bodies.join() {
                 let body = body.get(&physic_world);
                 let shape = body.shape();
-                if let Some(shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
+                if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
                     // TODO
                 } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>() {
                     let radius = shape.half_extents();
@@ -627,86 +525,14 @@ impl Graphics {
             }
         }
 
-        // Draw UI
-        let mut imgui = world.write_resource::<::resource::ImGuiOption>().take().unwrap();
-
-        let next_game_state;
-        let ref_cell_cmd_builder = RefCell::new(Some(command_buffer_builder));
-        {
-            let ui = imgui.frame(
-                (dimensions[0], dimensions[1]),
-                ((dimensions[0] as f32 * hidpi_factor) as u32, (dimensions[1] as f32 * hidpi_factor) as u32),
-                world.read_resource::<::resource::UpdateTime>().0,
-            );
-
-            next_game_state = game_state.update_draw_ui(&ui, world);
-
-            ui.render::<_, ()>(|ui, drawlist| {
-                let mut cmd_builder = ref_cell_cmd_builder.borrow_mut().take().unwrap();
-
-                let vertex_buffer = CpuAccessibleBuffer::from_iter(
-                    self.device.clone(),
-                    BufferUsage::vertex_buffer(),
-                    drawlist.vtx_buffer
-                        .iter()
-                        .map(|vtx| ImGuiVertex::from_im_draw_vert(vtx)),
-                ).unwrap();
-
-                let index_buffer = CpuAccessibleBuffer::from_iter(
-                    self.device.clone(),
-                    BufferUsage::index_buffer(),
-                    drawlist.idx_buffer.iter().cloned(),
-                ).unwrap();
-
-                for cmd in drawlist.cmd_buffer {
-                    let dynamic_state = DynamicState {
-                        viewports: Some(vec![
-                            Viewport {
-                                origin: [0.0, 0.0],
-                                dimensions: [dimensions[0] as f32, dimensions[1] as f32],
-                                depth_range: 0.0..1.0,
-                            },
-                        ]),
-                        // TODO:
-                        // Scissor {
-                        //     origin: [
-                        //         cmd.clip_rect.x as i32,
-                        //         (dimensions[1] - cmd.clip_rect.w) as i32,
-                        //     ],
-                        //     dimensions: [
-                        //         ((cmd.clip_rect.z - cmd.clip_rect.x) * scale_width) as u32,
-                        //         ((cmd.clip_rect.w - cmd.clip_rect.y) * scale_height) as u32,
-                        //     ],
-                        // }
-                        ..DynamicState::none()
-                    };
-
-
-                    cmd_builder = cmd_builder
-                        .draw_indexed(
-                            self.imgui_pipeline.clone(),
-                            screen_dynamic_state.clone(),
-                            vec![vertex_buffer.clone()],
-                            index_buffer.clone(),
-                            self.imgui_descriptor_set.clone(),
-                            (),
-                        )
-                        .unwrap();
-                }
-                *ref_cell_cmd_builder.borrow_mut() = Some(cmd_builder);
-                Ok(())
-            }).unwrap();
-        }
-
-        let command_buffer_builder = ref_cell_cmd_builder.borrow_mut().take().unwrap();
+        // TODO: Draw UI
+        let next_game_state = game_state.update_draw_ui(world);
 
         let command = command_buffer_builder
             .end_render_pass()
             .unwrap()
             .build()
             .unwrap();
-
-        *world.write_resource::<::resource::ImGuiOption>() = Some(imgui);
 
         (command, next_game_state)
     }
@@ -762,55 +588,6 @@ void main() {
     vec3 noir = vec3(0.0, 0.0, 0.0);
     float grey = texture(tex, v_tex_coords).r;
     color = vec4(noir*grey + red*(1.0 - grey), 1.0);
-}
-    "]
-    struct _Dummy;
-}
-
-mod imgui_vs {
-    #[derive(VulkanoShader)]
-    #[ty = "vertex"]
-    #[src = "
-
-#version 450
-
-layout(set = 0, binding = 0) uniform Matrix {
-    mat4 matrix;
-} matrix;
-
-layout(location = 0) in vec2 pos;
-layout(location = 1) in vec2 uv;
-layout(location = 2) in vec4 col;
-
-layout(location = 0) out vec2 f_uv;
-layout(location = 1) out vec4 f_color;
-
-void main() {
-    f_uv = uv;
-    f_color = col / 255.0;
-    gl_Position = matrix.matrix * vec4(pos.xy, 0, 1);
-    gl_Position.y = - gl_Position.y;
-}
-    "]
-    struct _Dummy;
-}
-
-mod imgui_fs {
-    #[derive(VulkanoShader)]
-    #[ty = "fragment"]
-    #[src = "
-
-#version 450
-
-layout(set = 0, binding = 1) uniform sampler2D tex;
-
-layout(location = 0) in vec2 f_uv;
-layout(location = 1) in vec4 f_color;
-
-layout(location = 0) out vec4 out_color;
-
-void main() {
-  out_color = f_color * texture(tex, f_uv.st);
 }
     "]
     struct _Dummy;

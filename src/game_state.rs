@@ -2,7 +2,7 @@ use specs::{Join, World};
 
 pub trait GameState {
     // TODO: Return bool = if next state gui must be set ?
-    fn update_draw_ui(self: Box<Self>, ui: &::imgui::Ui, world: &mut World) -> Box<GameState>;
+    fn update_draw_ui(self: Box<Self>, world: &mut World) -> Box<GameState>;
     fn winit_event(
         self: Box<Self>,
         event: ::winit::Event,
@@ -28,7 +28,7 @@ pub trait GameState {
 pub struct Game;
 
 impl GameState for Game {
-    fn update_draw_ui(self: Box<Self>, ui: &::imgui::Ui, world: &mut World) -> Box<GameState> {
+    fn update_draw_ui(self: Box<Self>, _world: &mut World) -> Box<GameState> {
         self
     }
 
@@ -42,9 +42,10 @@ impl GameState for Game {
 
     fn gilrs_event(
         self: Box<Self>,
-        _event: ::gilrs::EventType,
-        _world: &mut World,
+        event: ::gilrs::EventType,
+        world: &mut World,
     ) -> Box<GameState> {
+        println!("{:?}", event);
         self
     }
 
