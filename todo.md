@@ -99,6 +99,8 @@ peut être un écran qui montre le filet ou pas et dans quel sens ?
 * faire que y'a toujours une vitesse comme dans rayman mais on peut aussi mettre le turbo
   est-ce que le turbo devrait aussi affecter le fait de tourner (tourner plus rapide ?)
 
+* rajouter des barres comme rayman !!!!
+
 * chercher des boules dans le grappin
   d'autre a ne pas prendre
 

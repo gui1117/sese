@@ -21,6 +21,7 @@ pub struct Configuration {
     pub flight_control_lin_damping: f32,
     pub flight_control_power_force: f32,
     pub flight_control_direction_force: f32,
+    pub flight_control_default_power_force: f32,
 }
 
 impl Configuration {

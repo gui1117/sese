@@ -28,6 +28,7 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
             lin_damping: ::CFG.flight_control_lin_damping,
             power_force: ::CFG.flight_control_power_force,
             direction_force: ::CFG.flight_control_direction_force,
+            default_power_force: ::CFG.flight_control_default_power_force,
         })
         .build();
 

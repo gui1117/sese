@@ -8,6 +8,7 @@ pub struct FlightControl {
     pub ang_damping: f32,
     pub lin_damping: f32,
     pub power_force: f32,
+    pub default_power_force: f32,
     pub direction_force: f32,
 }
 impl ::specs::Component for FlightControl {
