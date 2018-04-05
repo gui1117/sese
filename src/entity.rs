@@ -18,7 +18,18 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
     let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 10000.0, 0.0, 0.0);
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
 
-    let entity = world.create_entity().with(::component::Player).build();
+    let entity = world.create_entity()
+        .with(::component::Player)
+        .with(::component::FlightControl {
+            x_direction: 0.0,
+            y_direction: 0.0,
+            power: 0.0,
+            ang_damping: ::CFG.flight_control_ang_damping,
+            lin_damping: ::CFG.flight_control_lin_damping,
+            power_force: ::CFG.flight_control_power_force,
+            direction_force: ::CFG.flight_control_direction_force,
+        })
+        .build();
 
     ::component::PhysicBody::add(
         entity,
@@ -26,4 +37,6 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
         &mut world.write(),
         &mut world.write_resource(),
     );
+
+    world.write_resource::<::resource::PlayersEntities>()[0] = Some(entity);
 }

@@ -15,6 +15,12 @@ lazy_static! {
 pub struct Configuration {
     pub fps: usize,
     pub unlocal_texture_size: u32,
+    pub physic_min_step_time: f32,
+    pub physic_max_step_time: f32,
+    pub flight_control_ang_damping: f32,
+    pub flight_control_lin_damping: f32,
+    pub flight_control_power_force: f32,
+    pub flight_control_direction_force: f32,
 }
 
 impl Configuration {

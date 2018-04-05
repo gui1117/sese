@@ -5,6 +5,10 @@ pub struct FlightControl {
     pub x_direction: f32,
     pub y_direction: f32,
     pub power: f32,
+    pub ang_damping: f32,
+    pub lin_damping: f32,
+    pub power_force: f32,
+    pub direction_force: f32,
 }
 impl ::specs::Component for FlightControl {
     type Storage = ::specs::VecStorage<Self>;

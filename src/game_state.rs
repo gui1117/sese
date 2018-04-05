@@ -1,4 +1,4 @@
-use specs::{Join, World};
+use specs::World;
 use gilrs::{Axis, Button, EventType};
 
 pub trait GameState {
@@ -66,11 +66,11 @@ impl GameState for Game {
                 match event {
                     EventType::AxisChanged(Axis::LeftStickX, value, _)
                     | EventType::AxisChanged(Axis::RightStickX, value, _) => {
-                        flight_control.y_direction = value;
-                    }
-                    EventType::AxisChanged(Axis::LeftStickX, value, _)
-                    | EventType::AxisChanged(Axis::RightStickX, value, _) => {
                         flight_control.x_direction = value;
+                    }
+                    EventType::AxisChanged(Axis::LeftStickY, value, _)
+                    | EventType::AxisChanged(Axis::RightStickY, value, _) => {
+                        flight_control.y_direction = value;
                     }
                     EventType::ButtonChanged(Button::LeftTrigger2, value, _)
                     | EventType::ButtonChanged(Button::RightTrigger2, value, _) => {
@@ -96,7 +96,6 @@ impl GameState for Game {
         gamepad: &::gilrs::Gamepad,
         world: &mut World,
     ) -> Box<GameState> {
-        println!("{}", gamepad.name());
         self
     }
 

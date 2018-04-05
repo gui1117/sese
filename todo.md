@@ -81,7 +81,7 @@ on peut faire faire un effet dessin avec trait noir mais qui décroit en fonctio
 * pour dessiner les labyrinthe: faire on dessine les plus grand rectangle 3D puis les + grand 2D puis les + grand 1D
   et random lorsque deux de même taille
 
-  ou alors plus random: on choisi un bloc et on l'étend le plus possible <---
+  ou alors plus random: on choisi un bloc et on l'étend le plus possible
 
 # level
 
@@ -93,7 +93,11 @@ toujours derrière au dessus avec haut=haut du vaisseau
 le mouvement peut être adouci avec un filtre passe bas ou tru du genre (comme les slider dans faust)
 
 peut être un écran qui montre le filet ou pas et dans quel sens ?
+
 # gameplay
+
+* faire que y'a toujours une vitesse comme dans rayman mais on peut aussi mettre le turbo
+  est-ce que le turbo devrait aussi affecter le fait de tourner (tourner plus rapide ?)
 
 * chercher des boules dans le grappin
   d'autre a ne pas prendre

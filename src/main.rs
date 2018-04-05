@@ -28,6 +28,7 @@ extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
 
+mod system;
 mod component;
 mod configuration;
 pub mod maze;
@@ -82,12 +83,17 @@ fn main() {
     let mut world = World::new();
     world.register::<::component::PhysicBody>();
     world.register::<::component::Player>();
+    world.register::<::component::FlightControl>();
+    world.register::<::component::Proximitor>();
+    world.register::<::component::Contactor>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
+    world.add_resource(::resource::PlayersEntities([None; 3]));
+    world.add_resource(::resource::PlayersGamepads([None; 3]));
     world.maintain();
 
     let mut update_dispatcher = DispatcherBuilder::new()
-        // .add(::system::PhysicSystem, "physic", &[])
+        .add(::system::physic::PhysicSystem, "physic", &[])
         // .add(::system::GravitySystem, "gravity", &[])
         .add_barrier() // Draw barrier
         // .add(::system::AnimationSystem, "animation", &[])
