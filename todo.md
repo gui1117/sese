@@ -1,8 +1,8 @@
 # Todo
 
-* faire le placement joli de la caméra (slider faust....)
 * faire génération du labyrinthe
 * faire génération des barres
+* faire le placement joli de la caméra (slider faust....)
 * faire monstres
 
 # Interface

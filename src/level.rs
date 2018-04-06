@@ -32,7 +32,6 @@ impl LevelBuilder {
         // for (wall, color) in colors {
         //     ::entity::create_wall(::util::to_world(&wall, 1.0), color, world);
         // }
-        // ::entity::create_wall(::util::to_world(&wall, 1.0), color, world);
 
         // let player_distance = 3;
         // let player_pos = ::na::Vector3::new(

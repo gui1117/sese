@@ -200,150 +200,42 @@ impl Graphics {
 
         let (cuboid_vertex_buffer, _future) = ImmutableBuffer::from_iter(
             [
-                Vertex {
-                    position: [1.0, -1.0, -1.0],
-                    tex_coords: [0.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, -1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, -1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, 1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, 1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, 1.0],
-                    tex_coords: [1.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, -1.0],
-                    tex_coords: [0.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, 1.0],
-                    tex_coords: [1.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, -1.0],
-                    tex_coords: [0.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, 1.0],
-                    tex_coords: [1.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, -1.0],
-                    tex_coords: [0.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, 1.0],
-                    tex_coords: [1.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, -1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, -1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, -1.0],
-                    tex_coords: [0.0, 0.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [-1.0, 1.0, 1.0],
-                    tex_coords: [0.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, 1.0],
-                    tex_coords: [1.0, 1.0],
-                },
-                Vertex {
-                    position: [1.0, 1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
-                },
+                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
+                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 1.0], },
+                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 0.0], },
+                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
+                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
+                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
+                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
+                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
+                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
+                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 1.0], },
+                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 0.0], },
+                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
+                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
+                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
             ].iter()
                 .cloned(),
             BufferUsage::vertex_buffer(),
@@ -601,8 +493,8 @@ impl Graphics {
                     perspective: ::na::Perspective3::new(
                         dimensions[0] as f32 / dimensions[1] as f32,
                         ::std::f32::consts::FRAC_PI_3,
-                        0.1,
-                        100.0,
+                        0.001,
+                        1000.0,
                     ).unwrap()
                         .into(),
                 })
