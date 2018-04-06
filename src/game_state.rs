@@ -30,7 +30,51 @@ impl GameState for Game {
         self
     }
 
-    fn winit_event(self: Box<Self>, _event: ::winit::Event, _world: &mut World) -> Box<GameState> {
+    fn winit_event(self: Box<Self>, event: ::winit::Event, world: &mut World) -> Box<GameState> {
+        let players_entities = world.read_resource::<::resource::PlayersEntities>();
+        let mut flight_controls = world.write::<::component::FlightControl>();
+
+        let flight_control = players_entities[0].and_then(|entity| flight_controls.get_mut(entity));
+
+        if let Some(flight_control) = flight_control {
+            match event {
+                ::winit::Event::WindowEvent {
+                    event: ::winit::WindowEvent::KeyboardInput {
+                        input: ::winit::KeyboardInput {
+                            state,
+                            virtual_keycode: Some(virtual_keycode),
+                            ..
+                        },
+                        ..
+                    },
+                    ..
+                } => {
+                    let value = match state {
+                        ::winit::ElementState::Pressed => 1.0,
+                        ::winit::ElementState::Released => 0.0,
+                    };
+                    match virtual_keycode {
+                        ::winit::VirtualKeyCode::Up => {
+                            flight_control.y_direction = value;
+                        }
+                        ::winit::VirtualKeyCode::Down => {
+                            flight_control.y_direction = -value;
+                        }
+                        ::winit::VirtualKeyCode::Left => {
+                            flight_control.x_direction = -value;
+                        }
+                        ::winit::VirtualKeyCode::Right => {
+                            flight_control.x_direction = value;
+                        }
+                        ::winit::VirtualKeyCode::Space=> {
+                            flight_control.power = value;
+                        }
+                        _ => (),
+                    }
+                },
+                _ => (),
+            }
+        }
         self
     }
 
@@ -93,8 +137,8 @@ impl GameState for Game {
     fn gilrs_gamepad_state(
         self: Box<Self>,
         _id: usize,
-        gamepad: &::gilrs::Gamepad,
-        world: &mut World,
+        _gamepad: &::gilrs::Gamepad,
+        _world: &mut World,
     ) -> Box<GameState> {
         self
     }

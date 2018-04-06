@@ -14,7 +14,7 @@ pub struct PlayersEntities(pub [Option<::specs::Entity>; 3]);
 pub struct UpdateTime(pub f32);
 
 const APP_INFO: AppInfo = AppInfo {
-    name: "HyperZen Training",
+    name: "SESE",
     author: "thiolliere",
 };
 const FILENAME: &str = "save.ron";

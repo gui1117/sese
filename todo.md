@@ -1,24 +1,9 @@
 # Todo
 
-* receate imgui
-
-* arreter les lumières ..
-* faire que des applats.
-* avec textures regardé pour gadrillage
-* faire d'abord des choses simple qu'on embellira
-* peut être avec du parralax mapping
-
-* a simple blender noise is beautiful but should also do lodev.org
-
-* maybe a solution to remove edge artefact is to add verticial mirror per square texture and horizontal one to the texture and divide by 3
-  et même faire le 2é mirroir après avoir faire laddiion et division pas 2 du premier
-  et même ça plusieur fois
-
-* créer un texture:
-  * nombre de division
-
-* faire le mouvement du vaisseau
 * faire le placement joli de la caméra (slider faust....)
+* faire génération du labyrinthe
+* faire génération des barres
+* faire monstres
 
 # Interface
 
@@ -44,6 +29,15 @@
 
 # Textures
 
+* améliorer les texture perlin avec le crate noise
+
+* on peut aussi faire un niveau avec que du bois
+  themes:
+  * bois
+  * rocher avec couleurs
+  * pavage comme http://dunand-chevallay-amenagement.fr/images/diapos/dalles_pierres_naturelles/Dunand_Chevallay_dalles_pierres_naturelles_2015-03__Web.jpg
+    non régulier avec des texture issue de perlin ....
+
 http://lodev.org/cgtutor/randomnoise.html
 https://pdtextures.blogspot.fr/
 
@@ -56,13 +50,9 @@ https://pdtextures.blogspot.fr/
   * on recolle en flouttant un peu les bord qui se toucherons une fois appliqué sur l'objet 3D
   * on additionne et divise
 
-# Plan
+# Camera
 
-* maze creation rendering
-* camera rendering
-* menu things
-
-* physics and gameplay
+faire que si obstacle alors avancer d'une certain manière la camera vers l'objet
 
 # Idea
 

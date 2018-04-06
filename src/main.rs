@@ -12,7 +12,6 @@ extern crate nalgebra as na;
 extern crate ncollide;
 extern crate nphysics3d as nphysics;
 extern crate pathfinding;
-extern crate png;
 extern crate rand;
 extern crate ron;
 extern crate serde;
@@ -27,7 +26,9 @@ extern crate vulkano;
 extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
+extern crate image;
 
+mod texture;
 mod system;
 mod component;
 mod configuration;

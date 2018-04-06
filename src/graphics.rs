@@ -24,7 +24,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use specs::{Join, World};
 use show_message::{OkOrShow, SomeOrShow};
-use rand::distributions::{IndependentSample, Range};
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
@@ -191,7 +190,7 @@ impl Graphics {
             [
                 Vertex {
                     position: [1.0, -1.0, -1.0],
-                    tex_coords: [1.0, 0.0],
+                    tex_coords: [0.0, 0.0],
                 },
                 Vertex {
                     position: [-1.0, -1.0, -1.0],
@@ -347,14 +346,20 @@ impl Graphics {
                 height: ::CFG.unlocal_texture_size,
             };
 
-            let mut rng = ::rand::thread_rng();
-            let range = Range::new(0.0, 1.0f32);
+            let image = ::texture::generate_texture(
+                dimensions.width(),
+                dimensions.height(),
+                ::CFG.unlocal_texture_layers,
+                // IDEA: all are good but
+                // gaussian is too grey
+                // nearest looks pixelized
+                ::image::FilterType::Lanczos3,
+            );
 
             let source = CpuAccessibleBuffer::from_iter(
                 queue.device().clone(),
                 BufferUsage::transfer_source(),
-                (0..dimensions.width() * dimensions.height())
-                    .map(|_| (range.ind_sample(&mut rng).powi(2) * 255.0).round() as u8),
+                image.into_raw().iter().cloned(),
             ).unwrap();
 
             let usage = ImageUsage {
@@ -368,7 +373,7 @@ impl Graphics {
                 device.clone(),
                 dimensions,
                 Format::R8Unorm,
-                MipmapsCount::Log2,
+                MipmapsCount::One,
                 usage,
                 layout,
                 device.active_queue_families(),
