@@ -65,11 +65,9 @@ impl Graphics {
         render_pass: &Arc<RenderPass<CustomRenderPassDesc>>,
     ) -> (Vec<Arc<FramebufferAbstract + Sync + Send>>, ()) {
         // FIXME: one depth buffer for each image ?
-        let depth_buffer_attachment = AttachmentImage::transient(
-            device.clone(),
-            images[0].dimensions(),
-            Format::D16Unorm,
-        ).unwrap();
+        let depth_buffer_attachment =
+            AttachmentImage::transient(device.clone(), images[0].dimensions(), Format::D16Unorm)
+                .unwrap();
 
         let framebuffers = images
             .iter()
@@ -278,7 +276,8 @@ impl Graphics {
             queue.clone(),
         ).unwrap();
 
-        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&device, &images, &render_pass);
+        let (framebuffers, ()) =
+            Graphics::framebuffers_and_descriptors(&device, &images, &render_pass);
 
         let (unlocal_texture, _future) = {
             let dimensions = Dimensions::Dim2d {
@@ -404,7 +403,8 @@ impl Graphics {
         let (swapchain, images) = recreate.unwrap();
         self.swapchain = swapchain;
 
-        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&self.device, &images, &self.render_pass);
+        let (framebuffers, ()) =
+            Graphics::framebuffers_and_descriptors(&self.device, &images, &self.render_pass);
         self.framebuffers = framebuffers;
     }
 

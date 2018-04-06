@@ -39,14 +39,16 @@ impl GameState for Game {
         if let Some(flight_control) = flight_control {
             match event {
                 ::winit::Event::WindowEvent {
-                    event: ::winit::WindowEvent::KeyboardInput {
-                        input: ::winit::KeyboardInput {
-                            state,
-                            virtual_keycode: Some(virtual_keycode),
+                    event:
+                        ::winit::WindowEvent::KeyboardInput {
+                            input:
+                                ::winit::KeyboardInput {
+                                    state,
+                                    virtual_keycode: Some(virtual_keycode),
+                                    ..
+                                },
                             ..
                         },
-                        ..
-                    },
                     ..
                 } => {
                     let value = match state {
@@ -66,12 +68,12 @@ impl GameState for Game {
                         ::winit::VirtualKeyCode::Right => {
                             flight_control.x_direction = value;
                         }
-                        ::winit::VirtualKeyCode::Space=> {
+                        ::winit::VirtualKeyCode::Space => {
                             flight_control.power = value;
                         }
                         _ => (),
                     }
-                },
+                }
                 _ => (),
             }
         }

@@ -36,10 +36,17 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
             body.set_lin_vel_internal(flight_control.lin_damping * lin_vel);
 
             body.clear_forces();
-            body.append_ang_force(orientation*::na::Vector3::y()*flight_control.y_direction*flight_control.direction_force);
-            body.append_ang_force(orientation*::na::Vector3::x()*flight_control.x_direction*flight_control.direction_force);
-            let lin_force = flight_control.power*flight_control.power_force+flight_control.default_power_force;
-            body.append_lin_force(orientation*::na::Vector3::x()*lin_force);
+            body.append_ang_force(
+                orientation * ::na::Vector3::y() * flight_control.y_direction
+                    * flight_control.direction_force,
+            );
+            body.append_ang_force(
+                orientation * ::na::Vector3::x() * flight_control.x_direction
+                    * flight_control.direction_force,
+            );
+            let lin_force = flight_control.power * flight_control.power_force
+                + flight_control.default_power_force;
+            body.append_lin_force(orientation * ::na::Vector3::x() * lin_force);
         }
 
         for contactor in (&mut contactors).join() {
@@ -102,13 +109,15 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
                         match (co1, co2) {
                             (&WorldObject::Sensor(w1), &WorldObject::RigidBody(w2)) => {
                                 let e1 = ::component::PhysicSensor::entity(physic_world.sensor(w1));
-                                let e2 = ::component::PhysicBody::entity(physic_world.rigid_body(w2));
+                                let e2 =
+                                    ::component::PhysicBody::entity(physic_world.rigid_body(w2));
                                 if let Some(proximitor) = proximitors.get_mut(e1) {
                                     proximitor.intersections.push(e2);
                                 }
                             }
                             (&WorldObject::RigidBody(w1), &WorldObject::Sensor(w2)) => {
-                                let e1 = ::component::PhysicBody::entity(physic_world.rigid_body(w1));
+                                let e1 =
+                                    ::component::PhysicBody::entity(physic_world.rigid_body(w1));
                                 let e2 = ::component::PhysicSensor::entity(physic_world.sensor(w2));
                                 if let Some(proximitor) = proximitors.get_mut(e2) {
                                     proximitor.intersections.push(e1);

@@ -6,6 +6,7 @@ extern crate failure;
 extern crate fps_counter;
 extern crate generic_array;
 extern crate gilrs;
+extern crate image;
 #[macro_use]
 extern crate lazy_static;
 extern crate nalgebra as na;
@@ -26,7 +27,6 @@ extern crate vulkano;
 extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
-extern crate image;
 
 mod texture;
 mod system;

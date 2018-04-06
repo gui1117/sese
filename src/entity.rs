@@ -18,7 +18,8 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
     let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 10000.0, 0.0, 0.0);
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
 
-    let entity = world.create_entity()
+    let entity = world
+        .create_entity()
         .with(::component::Player)
         .with(::component::FlightControl {
             x_direction: 0.0,
@@ -44,7 +45,7 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
 
 pub fn create_column(pos: ::na::Isometry3<f32>, maze_size: f32, world: &mut ::specs::World) {
     let shape = ::ncollide::shape::Cylinder::new(
-        maze_size*2_f32.sqrt()*::CFG.column_size_factor/2.0,
+        maze_size * 2_f32.sqrt() * ::CFG.column_size_factor / 2.0,
         ::CFG.column_radius,
     );
     let mut body = ::nphysics::object::RigidBody::new_static(shape, 0.0, 0.0);
