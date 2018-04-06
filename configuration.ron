@@ -1,12 +1,18 @@
 Configuration(
     fps: 60,
+
     unlocal_texture_size: 512,
     unlocal_texture_layers: 11,
+
     physic_max_step_time: 0.008,
     physic_min_step_time: 0.00001,
+
     flight_control_ang_damping: 0.9,
     flight_control_lin_damping: 0.9,
     flight_control_power_force: 1000.0,
     flight_control_direction_force: 10.0,
     flight_control_default_power_force: 0.0,//500.0,
+
+    column_radius: 0.1,
+    column_size_factor: 1.2,
 )

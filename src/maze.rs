@@ -255,6 +255,10 @@ where
         }
     }
 
+    pub fn size(&self) -> ::na::VectorN<isize, D> {
+        self.size.clone()
+    }
+
     pub fn is_cuboid(&self) -> bool {
         for &s in self.size.iter() {
             if s != self.size[0] {

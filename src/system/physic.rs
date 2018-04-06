@@ -13,7 +13,6 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
         ::specs::WriteStorage<'a, ::component::Proximitor>,
         ::specs::Fetch<'a, ::resource::UpdateTime>,
         ::specs::FetchMut<'a, ::resource::PhysicWorld>,
-        ::specs::Entities<'a>,
     );
 
     fn run(
@@ -25,7 +24,6 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
             mut proximitors,
             update_time,
             mut physic_world,
-            entities,
         ): Self::SystemData,
     ) {
         for (flight_control, body) in (&flight_controls, &mut bodies).join() {

@@ -1,9 +1,13 @@
 # Todo
 
-* faire génération du labyrinthe
-* faire génération des barres
+* faire graphisme
 * faire le placement joli de la caméra (slider faust....)
 * faire monstres
+
+# Barres
+
+des barres random sont inséré:
+il faut qu'elles traversent le cube, et que leur taille soit > traversé
 
 # Interface
 
@@ -137,3 +141,8 @@ differentes formes:
 # optimisation
 
 * faire que tout le monde statique soit contenu dans un vertexbuffer
+
+# types de graphisme
+
+* avec des dalles de différentes taille et dans un style marbre ou je sais avec perlin et couleurs de pepe
+* avec des rochés placé au endroits des murs et qui forme un sorte de grotte ?

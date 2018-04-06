@@ -25,6 +25,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use specs::{Join, World};
 use show_message::{OkOrShow, SomeOrShow};
+use std::f32::consts::PI;
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
@@ -49,6 +50,7 @@ pub struct Graphics {
         FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
     pub model_buffer_pool: CpuBufferPool<vs::ty::Model>,
     pub cuboid_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
+    pub cylinder_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
 
@@ -242,6 +244,40 @@ impl Graphics {
             queue.clone(),
         ).unwrap();
 
+        let (cylinder_vertex_buffer, _future) = ImmutableBuffer::from_iter(
+            {
+                let cylinder_div = 32;
+                let mut vertex = vec![];
+                for i in 0..cylinder_div {
+                    let a0 = (i as f32) * 2.0 * PI / cylinder_div as f32;
+                    let a1 = ((i + 1) as f32) * 2.0 * PI / cylinder_div as f32;
+
+                    let p0 = [a0.cos(), a0.sin()];
+                    let p1 = [a1.cos(), a1.sin()];
+
+                    vertex.push(Vertex { position: [p0[0], -1.0, p0[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [p1[0], -1.0, p1[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [  0.0, -1.0,   0.0], tex_coords: [0.0, 0.0], });
+
+                    vertex.push(Vertex { position: [p1[0],  1.0, p1[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [p0[0],  1.0, p0[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [  0.0,  1.0,   0.0], tex_coords: [0.0, 0.0], });
+
+                    vertex.push(Vertex { position: [p0[0], -1.0, p0[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [p0[0],  1.0, p0[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [p1[0],  1.0, p1[1]], tex_coords: [0.0, 0.0], });
+
+                    vertex.push(Vertex { position: [p1[0], -1.0, p1[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [p0[0], -1.0, p0[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex { position: [p1[0],  1.0, p1[1]], tex_coords: [0.0, 0.0], });
+                }
+                vertex
+            }.iter()
+                .cloned(),
+            BufferUsage::vertex_buffer(),
+            queue.clone(),
+        ).unwrap();
+
         let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&device, &images, &render_pass);
 
         let (unlocal_texture, _future) = {
@@ -334,6 +370,7 @@ impl Graphics {
             model_descriptor_sets_pool,
             model_buffer_pool,
             cuboid_vertex_buffer,
+            cylinder_vertex_buffer,
 
             unlocal_texture_descriptor_set,
         }
@@ -472,11 +509,11 @@ impl Graphics {
             let view_trans: ::na::Transform3<f32> = ::na::Similarity3::look_at_rh(
                 &::na::Point3::from_coordinates(
                     player_pos.translation.vector
-                        + player_pos.rotation * ::na::Vector3::new(-2.0, 0.0, 0.5),
+                        + player_pos.rotation * ::na::Vector3::new(-0.2, 0.0, 0.2),
                 ),
                 &::na::Point3::from_coordinates(
                     player_pos.translation.vector
-                        + player_pos.rotation * ::na::Vector3::new(0.0, 0.0, 0.5),
+                        + player_pos.rotation * ::na::Vector3::new(0.0, 0.0, 0.2),
                 ),
                 &(player_pos.rotation * ::na::Vector3::z()),
                 1.0,
@@ -493,8 +530,8 @@ impl Graphics {
                     perspective: ::na::Perspective3::new(
                         dimensions[0] as f32 / dimensions[1] as f32,
                         ::std::f32::consts::FRAC_PI_3,
-                        0.001,
-                        1000.0,
+                        0.01,
+                        100.0,
                     ).unwrap()
                         .into(),
                 })
@@ -516,6 +553,42 @@ impl Graphics {
                 let shape = body.shape();
                 if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
                     // TODO
+                } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>() {
+                    let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                        shape.radius(),
+                        shape.half_height(),
+                        shape.radius(),
+                        1.0,
+                    ));
+
+                    let position: ::na::Transform3<f32> = body.position().to_superset();
+
+                    let model = self.model_buffer_pool
+                        .next(vs::ty::Model {
+                            model: (position.unwrap() * primitive_trans).into(),
+                        })
+                        .unwrap();
+
+                    let model_descriptor_set = self.model_descriptor_sets_pool
+                        .next()
+                        .add_buffer(model)
+                        .unwrap()
+                        .build()
+                        .unwrap();
+
+                    command_buffer_builder = command_buffer_builder
+                        .draw(
+                            self.pipeline.clone(),
+                            screen_dynamic_state.clone(),
+                            vec![self.cylinder_vertex_buffer.clone()],
+                            (
+                                camera_descriptor_set.clone(),
+                                model_descriptor_set,
+                                self.unlocal_texture_descriptor_set.clone(),
+                            ),
+                            (),
+                        )
+                        .unwrap();
                 } else if let Some(shape) =
                     shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>()
                 {
