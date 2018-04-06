@@ -2,6 +2,7 @@ use vulkano::device::{Device, DeviceExtensions, Queue};
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError};
 use vulkano::sampler::Sampler;
 use vulkano::image::{Dimensions, ImageUsage, ImmutableImage, MipmapsCount};
+use vulkano::image::attachment::AttachmentImage;
 use vulkano::image::swapchain::SwapchainImage;
 use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool, ImmutableBuffer};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, LayoutAttachmentDescription,
@@ -57,15 +58,25 @@ pub struct Graphics {
 // TODO: return result failure ?
 impl Graphics {
     pub fn framebuffers_and_descriptors(
+        device: &Arc<Device>,
         images: &Vec<Arc<SwapchainImage<::winit::Window>>>,
         render_pass: &Arc<RenderPass<CustomRenderPassDesc>>,
     ) -> (Vec<Arc<FramebufferAbstract + Sync + Send>>, ()) {
+        // FIXME: one depth buffer for each image ?
+        let depth_buffer_attachment = AttachmentImage::transient(
+            device.clone(),
+            images[0].dimensions(),
+            Format::D16Unorm,
+        ).unwrap();
+
         let framebuffers = images
             .iter()
             .map(|image| {
                 Arc::new(
                     Framebuffer::start(render_pass.clone())
                         .add(image.clone())
+                        .unwrap()
+                        .add(depth_buffer_attachment.clone())
                         .unwrap()
                         .build()
                         .unwrap(),
@@ -168,6 +179,7 @@ impl Graphics {
                 .cull_mode_back()
                 .viewports_dynamic_scissors_irrelevant(1)
                 .fragment_shader(fs.main_entry_point(), ())
+                .depth_stencil_simple_depth()
                 .blend_alpha_blending()
                 .render_pass(vulkano::framebuffer::Subpass::from(render_pass.clone(), 0).unwrap())
                 .build(device.clone())
@@ -338,7 +350,7 @@ impl Graphics {
             queue.clone(),
         ).unwrap();
 
-        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&images, &render_pass);
+        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&device, &images, &render_pass);
 
         let (unlocal_texture, _future) = {
             let dimensions = Dimensions::Dim2d {
@@ -463,7 +475,7 @@ impl Graphics {
         let (swapchain, images) = recreate.unwrap();
         self.swapchain = swapchain;
 
-        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&images, &self.render_pass);
+        let (framebuffers, ()) = Graphics::framebuffers_and_descriptors(&self.device, &images, &self.render_pass);
         self.framebuffers = framebuffers;
     }
 
@@ -547,7 +559,7 @@ impl Graphics {
             .begin_render_pass(
                 self.framebuffers[image_num].clone(),
                 false,
-                vec![[0.0, 0.0, 1.0, 1.0].into()],
+                vec![[0.0, 0.0, 1.0, 1.0].into(), 1.0.into()],
             )
             .unwrap();
 
@@ -729,7 +741,7 @@ pub struct CustomRenderPassDesc {
 unsafe impl RenderPassDesc for CustomRenderPassDesc {
     #[inline]
     fn num_attachments(&self) -> usize {
-        1
+        2
     }
 
     #[inline]
@@ -746,6 +758,17 @@ unsafe impl RenderPassDesc for CustomRenderPassDesc {
                 initial_layout: ImageLayout::Undefined,
                 final_layout: ImageLayout::ColorAttachmentOptimal,
             }),
+            // Depth buffer
+            1 => Some(LayoutAttachmentDescription {
+                format: Format::D16Unorm,
+                samples: 1,
+                load: LoadOp::Clear,
+                store: StoreOp::DontCare,
+                stencil_load: LoadOp::Clear,
+                stencil_store: StoreOp::DontCare,
+                initial_layout: ImageLayout::Undefined,
+                final_layout: ImageLayout::DepthStencilAttachmentOptimal,
+            }),
             _ => None,
         }
     }
@@ -760,7 +783,7 @@ unsafe impl RenderPassDesc for CustomRenderPassDesc {
         match id {
             0 => Some(LayoutPassDescription {
                 color_attachments: vec![(0, ImageLayout::ColorAttachmentOptimal)],
-                depth_stencil: None,
+                depth_stencil: Some((1, ImageLayout::DepthStencilAttachmentOptimal)),
                 input_attachments: vec![],
                 resolve_attachments: vec![],
                 preserve_attachments: vec![],
