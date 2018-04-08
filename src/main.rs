@@ -108,13 +108,13 @@ fn main() {
     let mut game_state = Box::new(game_state::Game) as Box<GameState>;
 
     ::level::LevelBuilder {
-        half_size: 13,
+        half_size: 9,
         x_shift: false,
         y_shift: false,
         z_shift: false,
         percent: 5.0,
         unit: 1.0,
-        columns: 100,
+        columns: 0,
     }.build(&mut world);
 
     'main_loop: loop {

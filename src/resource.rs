@@ -13,6 +13,9 @@ pub struct PlayersEntities(pub [Option<::specs::Entity>; 3]);
 #[derive(Deref, DerefMut)]
 pub struct UpdateTime(pub f32);
 
+#[derive(Deref, DerefMut)]
+pub struct Tiles(pub Vec<::maze::Tile>);
+
 const APP_INFO: AppInfo = AppInfo {
     name: "SESE",
     author: "thiolliere",

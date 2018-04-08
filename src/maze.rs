@@ -43,15 +43,22 @@ where
     neighbours: Vec<::na::VectorN<isize, D>>,
 }
 
+#[derive(Debug)]
+pub struct Tile {
+    pub position: ::na::Isometry3<f32>,
+    pub width: f32,
+    pub height: f32,
+}
+
 impl Maze<::na::U3> {
     /// take a random wall, set the larger not colored cuboid containing it to one color
     ///
     /// continue while some wall are not colored
     pub fn build_colors(&self) -> HashMap<::na::Vector3<isize>, usize> {
         let mut wall_random_list = self.walls.iter().cloned().collect::<Vec<_>>();
-        let mut color = 0;
         thread_rng().shuffle(&mut wall_random_list);
 
+        let mut color = 0;
         let mut colored = HashMap::new();
         for wall in wall_random_list {
             if colored.contains_key(&wall) {
@@ -74,6 +81,349 @@ impl Maze<::na::U3> {
         }
 
         colored
+    }
+
+    /// Take a random cell in a face insert one largest tile on it. Continue to cover all faces
+    // tile sizes: 3x3, 3x2, 2x3, 2x2, 2x1, 1x2, 1x1
+    pub fn build_tiles(&self) -> Vec<Tile> {
+        #[derive(Hash, PartialEq, Eq, Clone)]
+        pub struct Face {
+            normal: ::na::Vector3<isize>,
+            position: ::na::Vector3<isize>,
+        }
+
+        fn one_largest(face: &Face, faces: &HashSet<Face>) -> Vec<Face> {
+            let mut rng = ::rand::thread_rng();
+            let mut tiles = all_9(face, faces);
+            if !tiles.is_empty() {
+                rng.shuffle(&mut tiles);
+                return tiles.swap_remove(0)
+            }
+            let mut tiles = all_6(face, faces);
+            if !tiles.is_empty() {
+                rng.shuffle(&mut tiles);
+                return tiles.swap_remove(0)
+            }
+            let mut tiles = all_4(face, faces);
+            if !tiles.is_empty() {
+                rng.shuffle(&mut tiles);
+                return tiles.swap_remove(0)
+            }
+            let mut tiles = all_2(face, faces);
+            if !tiles.is_empty() {
+                rng.shuffle(&mut tiles);
+                return tiles.swap_remove(0)
+            }
+            let mut tiles = all_1(face, faces);
+            if !tiles.is_empty() {
+                rng.shuffle(&mut tiles);
+                return tiles.swap_remove(0)
+            }
+            unreachable!();
+        }
+
+        fn all_1(face: &Face, faces: &HashSet<Face>) -> Vec<Vec<Face>> {
+            if faces.contains(&face) {
+                vec![vec![face.clone()]]
+            } else {
+                vec![]
+            }
+        }
+
+        fn all_2(face: &Face, faces: &HashSet<Face>) -> Vec<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            vec![
+                down_1x2(face, faces),
+                down_1x2(&Face { normal: face.normal, position: face.position+down }, faces),
+                left_2x1(face, faces),
+                left_2x1(&Face { normal: face.normal, position: face.position+left }, faces),
+            ].iter()
+                .cloned()
+                .filter_map(|tile| tile)
+                .collect::<Vec<_>>()
+        }
+
+        fn all_4(face: &Face, faces: &HashSet<Face>) -> Vec<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            vec![
+                down_left_2x2(face, faces),
+                down_left_2x2(&Face { normal: face.normal, position: face.position+left }, faces),
+                down_left_2x2(&Face { normal: face.normal, position: face.position+down }, faces),
+                down_left_2x2(&Face { normal: face.normal, position: face.position+down+left }, faces),
+            ].iter()
+                .cloned()
+                .filter_map(|tile| tile)
+                .collect::<Vec<_>>()
+        }
+
+        fn all_6(face: &Face, faces: &HashSet<Face>) -> Vec<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            vec![
+                down_3x2(face, faces),
+                down_3x2(&Face { normal: face.normal, position: face.position+down }, faces),
+                left_2x3(face, faces),
+                left_2x3(&Face { normal: face.normal, position: face.position+left }, faces),
+            ].iter()
+                .cloned()
+                .filter_map(|tile| tile)
+                .collect::<Vec<_>>()
+
+        }
+
+        fn all_9(face: &Face, faces: &HashSet<Face>) -> Vec<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            vec![
+                centered_3x3(face, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position-left }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position+left }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position-down }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position+down }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position-left-down }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position+left-down }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position-left+down }, faces),
+                centered_3x3(&Face { normal: face.normal, position: face.position+left+down }, faces),
+            ].iter()
+                .cloned()
+                .filter_map(|tile| tile)
+                .collect::<Vec<_>>()
+
+        }
+
+        fn down_1x2(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
+            let (_, down) = left_down(face.normal);
+            let tiles = [
+                face.position,
+                face.position-down,
+            ].iter()
+                .map(|position| Face { normal: face.normal, position: *position })
+                .collect::<Vec<_>>();
+
+            if tiles.iter().all(|face| faces.contains(face)) {
+                Some(tiles)
+            } else {
+                None
+            }
+        }
+
+        fn left_2x1(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
+            let (left, _) = left_down(face.normal);
+            let tiles = [
+                face.position,
+                face.position-left,
+            ].iter()
+                .map(|position| Face { normal: face.normal, position: *position })
+                .collect::<Vec<_>>();
+
+            if tiles.iter().all(|face| faces.contains(face)) {
+                Some(tiles)
+            } else {
+                None
+            }
+        }
+
+        fn down_left_2x2(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            let tiles = [
+                face.position,
+                face.position-left,
+                face.position-left-down,
+                face.position-down,
+            ].iter()
+                .map(|position| Face { normal: face.normal, position: *position })
+                .collect::<Vec<_>>();
+
+            if tiles.iter().all(|face| faces.contains(face)) {
+                Some(tiles)
+            } else {
+                None
+            }
+        }
+
+        fn left_2x3(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            let tiles = [
+                face.position,
+                face.position+down,
+                face.position-down,
+                face.position-left,
+                face.position-left+down,
+                face.position-left-down,
+            ].iter()
+                .map(|position| Face { normal: face.normal, position: *position })
+                .collect::<Vec<_>>();
+
+            if tiles.iter().all(|face| faces.contains(face)) {
+                Some(tiles)
+            } else {
+                None
+            }
+        }
+
+        fn down_3x2(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            let tiles = [
+                face.position,
+                face.position+left,
+                face.position-left,
+                face.position+down,
+                face.position+down+left,
+                face.position+down-left,
+            ].iter()
+                .map(|position| Face { normal: face.normal, position: *position })
+                .collect::<Vec<_>>();
+
+            if tiles.iter().all(|face| faces.contains(face)) {
+                Some(tiles)
+            } else {
+                None
+            }
+        }
+
+        fn centered_3x3(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
+            let (left, down) = left_down(face.normal);
+            let tiles = [
+                face.position,
+                face.position+left,
+                face.position-left,
+                face.position+down,
+                face.position-down,
+                face.position+left+down,
+                face.position-left+down,
+                face.position+left-down,
+                face.position-left-down,
+            ].iter()
+                .map(|position| Face { normal: face.normal, position: *position })
+                .collect::<Vec<_>>();
+
+            if tiles.iter().all(|face| faces.contains(face)) {
+                Some(tiles)
+            } else {
+                None
+            }
+        }
+
+        fn left_down(normal: ::na::Vector3<isize>) -> (::na::Vector3<isize>, ::na::Vector3<isize>) {
+            if normal == ::na::Vector3::new(1, 0, 0) {
+                (::na::Vector3::new(0, -1, 0), ::na::Vector3::new(0, 0, -1))
+            } else if normal == ::na::Vector3::new(0, 1, 0) {
+                (::na::Vector3::new(1, 0, 0), ::na::Vector3::new(0, 0, -1))
+            } else if normal == ::na::Vector3::new(0, 0, 1) {
+                (::na::Vector3::new(-1, 0, 0), ::na::Vector3::new(0, -1, 0))
+            } else if normal == ::na::Vector3::new(-1, 0, 0) {
+                let (left, down) = left_down(-normal);
+                (-left, -down)
+            } else if normal == ::na::Vector3::new(0, -1, 0) {
+                let (left, down) = left_down(-normal);
+                (-left, -down)
+            } else if normal == ::na::Vector3::new(0, 0, -1) {
+                let (left, down) = left_down(-normal);
+                (-left, -down)
+            } else {
+                unreachable!();
+            }
+        }
+
+        fn orientation(normal: ::na::Vector3<isize>) -> ::na::UnitQuaternion<f32> {
+            if normal == ::na::Vector3::new(1, 0, 0) {
+                ::na::UnitQuaternion::from_axis_angle(
+                    &::na::Unit::new_normalize(::na::Vector3::new(1.0, 0.0, 0.0)),
+                    ::std::f32::consts::FRAC_PI_2,
+                )*
+                ::na::UnitQuaternion::from_axis_angle(
+                    &::na::Unit::new_normalize(::na::Vector3::new(0.0, 1.0, 0.0)),
+                    ::std::f32::consts::FRAC_PI_2,
+                )
+            } else if normal == ::na::Vector3::new(0, 1, 0) {
+                ::na::UnitQuaternion::from_axis_angle(
+                    &::na::Unit::new_normalize(::na::Vector3::new(1.0, 0.0, 0.0)),
+                    ::std::f32::consts::FRAC_PI_2,
+                )
+            } else if normal == ::na::Vector3::new(0, 0, 1) {
+                ::na::one()
+            } else if normal == ::na::Vector3::new(-1, 0, 0) {
+                -orientation(-normal)
+            } else if normal == ::na::Vector3::new(0, -1, 0) {
+                -orientation(-normal)
+            } else if normal == ::na::Vector3::new(0, 0, -1) {
+                -orientation(-normal)
+            } else {
+                unreachable!();
+            }
+        }
+
+        let mut faces = self.walls.iter()
+            .flat_map(|cell| {
+                [
+                    ::na::Vector3::new(-1, 0, 0),
+                    ::na::Vector3::new(1, 0, 0),
+                    ::na::Vector3::new(0, -1, 0),
+                    ::na::Vector3::new(0, 1, 0),
+                    ::na::Vector3::new(0, 0, -1),
+                    ::na::Vector3::new(0, 0, 1),
+                ].iter()
+                    .filter(|normal| !self.walls.contains(&(cell+*normal)))
+                    .map(|normal| Face {
+                        normal: *normal,
+                        position: *cell,
+                    })
+                .collect::<Vec<_>>()
+            })
+            .collect::<HashSet<_>>();
+
+        let mut tiles = vec![];
+        let mut face_random_list = faces.iter().cloned().collect::<Vec<_>>();
+        thread_rng().shuffle(&mut face_random_list);
+        for face in face_random_list {
+            if faces.contains(&face) {
+                let largest_tile = one_largest(&face, &faces);
+
+                let mut x_min = ::std::isize::MAX;
+                let mut x_max = ::std::isize::MIN;
+                let mut y_min = ::std::isize::MAX;
+                let mut y_max = ::std::isize::MIN;
+                let mut z_min = ::std::isize::MAX;
+                let mut z_max = ::std::isize::MIN;
+
+                let normal = largest_tile[0].normal;
+                let (left, down) = left_down(normal);
+
+                for face in largest_tile {
+                    faces.remove(&face);
+                    x_min = x_min.min(face.position[0]);
+                    x_max = x_max.max(face.position[0]);
+                    y_min = y_min.min(face.position[1]);
+                    y_max = y_max.max(face.position[1]);
+                    z_min = z_min.min(face.position[2]);
+                    z_max = z_max.max(face.position[2]);
+                }
+
+                let size = ::na::Vector3::new(
+                    x_max - x_min + 1,
+                    y_max - y_min + 1,
+                    z_max - z_min + 1,
+                );
+
+                let translation = ::na::Vector3::new(
+                    x_min as f32 + size[0] as f32/2.0 + normal[0] as f32/2.0,
+                    y_min as f32 + size[1] as f32/2.0 + normal[1] as f32/2.0,
+                    z_min as f32 + size[2] as f32/2.0 + normal[2] as f32/2.0,
+                );
+
+                let position = ::na::Isometry3::from_parts(
+                    ::na::Translation::from_vector(translation),
+                    orientation(normal),
+                );
+
+                tiles.push(Tile {
+                    position: position,
+                    width: (left.component_mul(&size)).iter().sum::<isize>().abs() as f32,
+                    height: (down.component_mul(&size)).iter().sum::<isize>().abs() as f32,
+                });
+            }
+        }
+
+
+        tiles
     }
 }
 

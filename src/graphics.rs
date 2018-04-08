@@ -492,8 +492,6 @@ impl Graphics {
             )
             .unwrap();
 
-        // TODO: Draw world
-
         // Draw physic world
         {
             let physic_world = world.read_resource::<::resource::PhysicWorld>();
@@ -548,6 +546,43 @@ impl Graphics {
                     .unwrap(),
             );
 
+            for tile in &world.read_resource::<::resource::Tiles>().0 {
+                let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                    tile.width/2.0,
+                    tile.height/2.0,
+                    0.1,
+                    1.0,
+                ));
+
+                let position: ::na::Transform3<f32> = tile.position.to_superset();
+
+                let model = self.model_buffer_pool
+                    .next(vs::ty::Model {
+                        model: (position.unwrap() * primitive_trans).into(),
+                    })
+                    .unwrap();
+
+                let model_descriptor_set = self.model_descriptor_sets_pool
+                    .next()
+                    .add_buffer(model)
+                    .unwrap()
+                    .build()
+                    .unwrap();
+
+                command_buffer_builder = command_buffer_builder
+                    .draw(
+                        self.pipeline.clone(),
+                        screen_dynamic_state.clone(),
+                        vec![self.cuboid_vertex_buffer.clone()],
+                        (
+                            camera_descriptor_set.clone(),
+                            model_descriptor_set,
+                            self.unlocal_texture_descriptor_set.clone(),
+                        ),
+                        (),
+                    )
+                    .unwrap();
+            }
             for body in physic_bodies.join() {
                 let body = body.get(&physic_world);
                 let shape = body.shape();

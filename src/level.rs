@@ -41,6 +41,14 @@ impl LevelBuilder {
             ::entity::create_wall(::util::to_world(&wall, self.unit), color, world);
         }
 
+        let mut tiles = maze.build_tiles();
+        for tile in &mut tiles {
+            tile.position.translation.vector *= self.unit;
+            tile.width *= self.unit;
+            tile.height *= self.unit;
+        }
+        world.add_resource(::resource::Tiles(tiles));
+
         // Build columns
         for _ in 0..self.columns {
             let translation = ::na::Vector3::from_iterator(
