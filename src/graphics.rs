@@ -34,6 +34,15 @@ pub struct Vertex {
 }
 impl_vertex!(Vertex, position, tex_coords);
 
+impl Vertex {
+    fn new(position: [f32; 3], tex_coords: [f32; 2]) -> Self {
+        Vertex {
+            position,
+            tex_coords,
+        }
+    }
+}
+
 pub struct Graphics {
     pub queue: Arc<Queue>,
     pub device: Arc<Device>,
@@ -200,42 +209,42 @@ impl Graphics {
 
         let (cuboid_vertex_buffer, _future) = ImmutableBuffer::from_iter(
             [
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 1.0], },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 0.0], },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, -1.0, -1.0], tex_coords: [0.0, 0.0], },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, -1.0, 1.0], tex_coords: [1.0, 1.0], },
-                Vertex { position: [-1.0, -1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, -1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
-                Vertex { position: [-1.0, 1.0, -1.0], tex_coords: [0.0, 0.0], },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [-1.0, 1.0, 1.0], tex_coords: [0.0, 1.0], },
-                Vertex { position: [1.0, 1.0, 1.0], tex_coords: [1.0, 1.0], },
-                Vertex { position: [1.0, 1.0, -1.0], tex_coords: [1.0, 0.0], },
+                Vertex::new([1.0, -1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, -1.0, -1.0], [0.0, 0.0]),
+                Vertex::new([-1.0, 1.0, -1.0], [0.0, 1.0]),
+                Vertex::new([1.0, 1.0, -1.0], [1.0, 1.0]),
+                Vertex::new([1.0, -1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, 1.0, -1.0], [0.0, 1.0]),
+                Vertex::new([-1.0, -1.0, 1.0], [0.0, 0.0]),
+                Vertex::new([1.0, -1.0, 1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, 1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([1.0, -1.0, 1.0], [1.0, 0.0]),
+                Vertex::new([1.0, 1.0, 1.0], [1.0, 1.0]),
+                Vertex::new([-1.0, 1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([-1.0, -1.0, -1.0], [0.0, 0.0]),
+                Vertex::new([-1.0, -1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([-1.0, 1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, -1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([-1.0, 1.0, 1.0], [1.0, 1.0]),
+                Vertex::new([-1.0, 1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([1.0, -1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([1.0, -1.0, -1.0], [0.0, 0.0]),
+                Vertex::new([1.0, 1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([1.0, 1.0, 1.0], [1.0, 1.0]),
+                Vertex::new([1.0, -1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([1.0, 1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, -1.0, -1.0], [0.0, 0.0]),
+                Vertex::new([1.0, -1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, -1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([1.0, -1.0, 1.0], [1.0, 1.0]),
+                Vertex::new([-1.0, -1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([1.0, -1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([1.0, 1.0, -1.0], [1.0, 0.0]),
+                Vertex::new([-1.0, 1.0, -1.0], [0.0, 0.0]),
+                Vertex::new([-1.0, 1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([-1.0, 1.0, 1.0], [0.0, 1.0]),
+                Vertex::new([1.0, 1.0, 1.0], [1.0, 1.0]),
+                Vertex::new([1.0, 1.0, -1.0], [1.0, 0.0]),
             ].iter()
                 .cloned(),
             BufferUsage::vertex_buffer(),
@@ -253,21 +262,21 @@ impl Graphics {
                     let p0 = [a0.cos(), a0.sin()];
                     let p1 = [a1.cos(), a1.sin()];
 
-                    vertex.push(Vertex { position: [p0[0], -1.0, p0[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [p1[0], -1.0, p1[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [  0.0, -1.0,   0.0], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex::new([p0[0], -1.0, p0[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([p1[0], -1.0, p1[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([0.0, -1.0, 0.0], [0.0, 0.0]));
 
-                    vertex.push(Vertex { position: [p1[0],  1.0, p1[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [p0[0],  1.0, p0[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [  0.0,  1.0,   0.0], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex::new([p1[0], 1.0, p1[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([p0[0], 1.0, p0[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([0.0, 1.0, 0.0], [0.0, 0.0]));
 
-                    vertex.push(Vertex { position: [p0[0], -1.0, p0[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [p0[0],  1.0, p0[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [p1[0],  1.0, p1[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex::new([p0[0], -1.0, p0[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([p0[0], 1.0, p0[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([p1[0], 1.0, p1[1]], [0.0, 0.0]));
 
-                    vertex.push(Vertex { position: [p1[0], -1.0, p1[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [p0[0], -1.0, p0[1]], tex_coords: [0.0, 0.0], });
-                    vertex.push(Vertex { position: [p1[0],  1.0, p1[1]], tex_coords: [0.0, 0.0], });
+                    vertex.push(Vertex::new([p1[0], -1.0, p1[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([p0[0], -1.0, p0[1]], [0.0, 0.0]));
+                    vertex.push(Vertex::new([p1[0], 1.0, p1[1]], [0.0, 0.0]));
                 }
                 vertex
             }.iter()
