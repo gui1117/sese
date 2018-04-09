@@ -87,9 +87,18 @@ impl Maze<::na::U3> {
     // tile sizes: 3x3, 3x2, 2x3, 2x2, 2x1, 1x2, 1x1
     pub fn build_tiles(&self) -> Vec<Tile> {
         #[derive(Hash, PartialEq, Eq, Clone)]
-        pub struct Face {
+        struct Face {
             normal: ::na::Vector3<isize>,
             position: ::na::Vector3<isize>,
+        }
+
+        impl Face {
+            fn shift(&self, shift: ::na::Vector3<isize>) -> Face {
+                Face {
+                    normal: self.normal,
+                    position: self.position + shift,
+                }
+            }
         }
 
         fn one_largest(face: &Face, faces: &HashSet<Face>) -> Vec<Face> {
@@ -134,9 +143,9 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             vec![
                 down_1x2(face, faces),
-                down_1x2(&Face { normal: face.normal, position: face.position+down }, faces),
+                down_1x2(&face.shift(down), faces),
                 left_2x1(face, faces),
-                left_2x1(&Face { normal: face.normal, position: face.position+left }, faces),
+                left_2x1(&face.shift(left), faces),
             ].iter()
                 .cloned()
                 .filter_map(|tile| tile)
@@ -147,9 +156,9 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             vec![
                 down_left_2x2(face, faces),
-                down_left_2x2(&Face { normal: face.normal, position: face.position+left }, faces),
-                down_left_2x2(&Face { normal: face.normal, position: face.position+down }, faces),
-                down_left_2x2(&Face { normal: face.normal, position: face.position+down+left }, faces),
+                down_left_2x2(&face.shift(left), faces),
+                down_left_2x2(&face.shift(down), faces),
+                down_left_2x2(&face.shift(down + left), faces),
             ].iter()
                 .cloned()
                 .filter_map(|tile| tile)
@@ -160,21 +169,9 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             vec![
                 down_3x2(face, faces),
-                down_3x2(
-                    &Face {
-                        normal: face.normal,
-                        position: face.position + down,
-                    },
-                    faces,
-                ),
+                down_3x2(&face.shift(down), faces),
                 left_2x3(face, faces),
-                left_2x3(
-                    &Face {
-                        normal: face.normal,
-                        position: face.position + left,
-                    },
-                    faces,
-                ),
+                left_2x3(&face.shift(left), faces),
             ].iter()
                 .cloned()
                 .filter_map(|tile| tile)
@@ -185,14 +182,14 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             vec![
                 centered_3x3(face, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position-left }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position+left }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position-down }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position+down }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position-left-down }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position+left-down }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position-left+down }, faces),
-                centered_3x3(&Face { normal: face.normal, position: face.position+left+down }, faces),
+                centered_3x3(&face.shift(-left), faces),
+                centered_3x3(&face.shift(left), faces),
+                centered_3x3(&face.shift(-down), faces),
+                centered_3x3(&face.shift(down), faces),
+                centered_3x3(&face.shift(-left - down), faces),
+                centered_3x3(&face.shift(left - down), faces),
+                centered_3x3(&face.shift(-left + down), faces),
+                centered_3x3(&face.shift(left + down), faces),
             ].iter()
                 .cloned()
                 .filter_map(|tile| tile)
