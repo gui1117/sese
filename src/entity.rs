@@ -1,5 +1,5 @@
 pub fn create_wall(pos: ::na::Vector3<f32>, _color: usize, world: &mut ::specs::World) {
-    let shape = ::ncollide::shape::Cuboid3::new(::na::Vector3::from_element(1.0));
+    let shape = ::ncollide::shape::Cuboid3::new(::na::Vector3::from_element(0.5));
     let mut body = ::nphysics::object::RigidBody::new_static(shape, 0.0, 0.0);
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
 

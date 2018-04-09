@@ -1,6 +1,5 @@
 # Todo
 
-* faire graphisme
 * faire le placement joli de la caméra (slider faust....)
 * faire monstres
 
