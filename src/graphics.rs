@@ -726,9 +726,9 @@ layout(set = 2, binding = 0) uniform sampler2D tex;
 
 void main() {
     vec3 red = vec3(1.0, 0.0, 0.0);
-    vec3 noir = vec3(0.0, 0.0, 0.0);
+    vec3 black = vec3(0.0, 0.0, 0.0);
     float grey = texture(tex, v_tex_coords).r;
-    color = vec4(noir*grey + red*(1.0 - grey), 1.0);
+    color = vec4(black*grey + red*(1.0 - grey), 1.0);
 }
     "]
     struct _Dummy;
