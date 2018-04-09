@@ -97,27 +97,27 @@ impl Maze<::na::U3> {
             let mut tiles = all_9(face, faces);
             if !tiles.is_empty() {
                 rng.shuffle(&mut tiles);
-                return tiles.swap_remove(0)
+                return tiles.swap_remove(0);
             }
             let mut tiles = all_6(face, faces);
             if !tiles.is_empty() {
                 rng.shuffle(&mut tiles);
-                return tiles.swap_remove(0)
+                return tiles.swap_remove(0);
             }
             let mut tiles = all_4(face, faces);
             if !tiles.is_empty() {
                 rng.shuffle(&mut tiles);
-                return tiles.swap_remove(0)
+                return tiles.swap_remove(0);
             }
             let mut tiles = all_2(face, faces);
             if !tiles.is_empty() {
                 rng.shuffle(&mut tiles);
-                return tiles.swap_remove(0)
+                return tiles.swap_remove(0);
             }
             let mut tiles = all_1(face, faces);
             if !tiles.is_empty() {
                 rng.shuffle(&mut tiles);
-                return tiles.swap_remove(0)
+                return tiles.swap_remove(0);
             }
             unreachable!();
         }
@@ -160,14 +160,25 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             vec![
                 down_3x2(face, faces),
-                down_3x2(&Face { normal: face.normal, position: face.position+down }, faces),
+                down_3x2(
+                    &Face {
+                        normal: face.normal,
+                        position: face.position + down,
+                    },
+                    faces,
+                ),
                 left_2x3(face, faces),
-                left_2x3(&Face { normal: face.normal, position: face.position+left }, faces),
+                left_2x3(
+                    &Face {
+                        normal: face.normal,
+                        position: face.position + left,
+                    },
+                    faces,
+                ),
             ].iter()
                 .cloned()
                 .filter_map(|tile| tile)
                 .collect::<Vec<_>>()
-
         }
 
         fn all_9(face: &Face, faces: &HashSet<Face>) -> Vec<Vec<Face>> {
@@ -186,16 +197,16 @@ impl Maze<::na::U3> {
                 .cloned()
                 .filter_map(|tile| tile)
                 .collect::<Vec<_>>()
-
         }
 
         fn down_1x2(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
             let (_, down) = left_down(face.normal);
-            let tiles = [
-                face.position,
-                face.position-down,
-            ].iter()
-                .map(|position| Face { normal: face.normal, position: *position })
+            let tiles = [face.position, face.position - down]
+                .iter()
+                .map(|position| Face {
+                    normal: face.normal,
+                    position: *position,
+                })
                 .collect::<Vec<_>>();
 
             if tiles.iter().all(|face| faces.contains(face)) {
@@ -207,11 +218,12 @@ impl Maze<::na::U3> {
 
         fn left_2x1(face: &Face, faces: &HashSet<Face>) -> Option<Vec<Face>> {
             let (left, _) = left_down(face.normal);
-            let tiles = [
-                face.position,
-                face.position-left,
-            ].iter()
-                .map(|position| Face { normal: face.normal, position: *position })
+            let tiles = [face.position, face.position - left]
+                .iter()
+                .map(|position| Face {
+                    normal: face.normal,
+                    position: *position,
+                })
                 .collect::<Vec<_>>();
 
             if tiles.iter().all(|face| faces.contains(face)) {
@@ -225,11 +237,14 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             let tiles = [
                 face.position,
-                face.position-left,
-                face.position-left-down,
-                face.position-down,
+                face.position - left,
+                face.position - left - down,
+                face.position - down,
             ].iter()
-                .map(|position| Face { normal: face.normal, position: *position })
+                .map(|position| Face {
+                    normal: face.normal,
+                    position: *position,
+                })
                 .collect::<Vec<_>>();
 
             if tiles.iter().all(|face| faces.contains(face)) {
@@ -243,13 +258,16 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             let tiles = [
                 face.position,
-                face.position+down,
-                face.position-down,
-                face.position-left,
-                face.position-left+down,
-                face.position-left-down,
+                face.position + down,
+                face.position - down,
+                face.position - left,
+                face.position - left + down,
+                face.position - left - down,
             ].iter()
-                .map(|position| Face { normal: face.normal, position: *position })
+                .map(|position| Face {
+                    normal: face.normal,
+                    position: *position,
+                })
                 .collect::<Vec<_>>();
 
             if tiles.iter().all(|face| faces.contains(face)) {
@@ -263,13 +281,16 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             let tiles = [
                 face.position,
-                face.position+left,
-                face.position-left,
-                face.position+down,
-                face.position+down+left,
-                face.position+down-left,
+                face.position + left,
+                face.position - left,
+                face.position + down,
+                face.position + down + left,
+                face.position + down - left,
             ].iter()
-                .map(|position| Face { normal: face.normal, position: *position })
+                .map(|position| Face {
+                    normal: face.normal,
+                    position: *position,
+                })
                 .collect::<Vec<_>>();
 
             if tiles.iter().all(|face| faces.contains(face)) {
@@ -283,16 +304,19 @@ impl Maze<::na::U3> {
             let (left, down) = left_down(face.normal);
             let tiles = [
                 face.position,
-                face.position+left,
-                face.position-left,
-                face.position+down,
-                face.position-down,
-                face.position+left+down,
-                face.position-left+down,
-                face.position+left-down,
-                face.position-left-down,
+                face.position + left,
+                face.position - left,
+                face.position + down,
+                face.position - down,
+                face.position + left + down,
+                face.position - left + down,
+                face.position + left - down,
+                face.position - left - down,
             ].iter()
-                .map(|position| Face { normal: face.normal, position: *position })
+                .map(|position| Face {
+                    normal: face.normal,
+                    position: *position,
+                })
                 .collect::<Vec<_>>();
 
             if tiles.iter().all(|face| faces.contains(face)) {
@@ -328,11 +352,11 @@ impl Maze<::na::U3> {
                 ::na::UnitQuaternion::from_axis_angle(
                     &::na::Unit::new_normalize(::na::Vector3::new(1.0, 0.0, 0.0)),
                     ::std::f32::consts::FRAC_PI_2,
-                )*
-                ::na::UnitQuaternion::from_axis_angle(
-                    &::na::Unit::new_normalize(::na::Vector3::new(0.0, 1.0, 0.0)),
-                    ::std::f32::consts::FRAC_PI_2,
                 )
+                    * ::na::UnitQuaternion::from_axis_angle(
+                        &::na::Unit::new_normalize(::na::Vector3::new(0.0, 1.0, 0.0)),
+                        ::std::f32::consts::FRAC_PI_2,
+                    )
             } else if normal == ::na::Vector3::new(0, 1, 0) {
                 ::na::UnitQuaternion::from_axis_angle(
                     &::na::Unit::new_normalize(::na::Vector3::new(1.0, 0.0, 0.0)),
@@ -351,7 +375,8 @@ impl Maze<::na::U3> {
             }
         }
 
-        let mut faces = self.walls.iter()
+        let mut faces = self.walls
+            .iter()
             .flat_map(|cell| {
                 [
                     ::na::Vector3::new(-1, 0, 0),
@@ -361,12 +386,12 @@ impl Maze<::na::U3> {
                     ::na::Vector3::new(0, 0, -1),
                     ::na::Vector3::new(0, 0, 1),
                 ].iter()
-                    .filter(|normal| !self.walls.contains(&(cell+*normal)))
+                    .filter(|normal| !self.walls.contains(&(cell + *normal)))
                     .map(|normal| Face {
                         normal: *normal,
                         position: *cell,
                     })
-                .collect::<Vec<_>>()
+                    .collect::<Vec<_>>()
             })
             .collect::<HashSet<_>>();
 
@@ -397,16 +422,13 @@ impl Maze<::na::U3> {
                     z_max = z_max.max(face.position[2]);
                 }
 
-                let size = ::na::Vector3::new(
-                    x_max - x_min + 1,
-                    y_max - y_min + 1,
-                    z_max - z_min + 1,
-                );
+                let size =
+                    ::na::Vector3::new(x_max - x_min + 1, y_max - y_min + 1, z_max - z_min + 1);
 
                 let translation = ::na::Vector3::new(
-                    x_min as f32 + size[0] as f32/2.0 + normal[0] as f32/2.0,
-                    y_min as f32 + size[1] as f32/2.0 + normal[1] as f32/2.0,
-                    z_min as f32 + size[2] as f32/2.0 + normal[2] as f32/2.0,
+                    x_min as f32 + size[0] as f32 / 2.0 + normal[0] as f32 / 2.0,
+                    y_min as f32 + size[1] as f32 / 2.0 + normal[1] as f32 / 2.0,
+                    z_min as f32 + size[2] as f32 / 2.0 + normal[2] as f32 / 2.0,
                 );
 
                 let position = ::na::Isometry3::from_parts(
@@ -421,7 +443,6 @@ impl Maze<::na::U3> {
                 });
             }
         }
-
 
         tiles
     }

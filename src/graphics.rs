@@ -548,8 +548,8 @@ impl Graphics {
 
             for tile in &world.read_resource::<::resource::Tiles>().0 {
                 let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                    tile.width/2.0,
-                    tile.height/2.0,
+                    tile.width / 2.0,
+                    tile.height / 2.0,
                     0.1,
                     1.0,
                 ));
@@ -703,6 +703,7 @@ layout(set = 1, binding = 0) uniform Model {
 } model;
 
 void main() {
+    // TODO: make perspective/view multiplication on the cpu
     gl_Position = perspective.perspective * view.view * model.model * vec4(position, 1.0);
     gl_Position.y = - gl_Position.y;
     v_tex_coords = tex_coords;
