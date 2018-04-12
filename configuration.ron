@@ -1,8 +1,8 @@
 Configuration(
     fps: 60,
 
-    unlocal_texture_size: 512,
-    unlocal_texture_layers: 11,
+    unlocal_texture_size: 128,//512
+    unlocal_texture_layers: 4,//11
 
     physic_max_step_time: 0.008,
     physic_min_step_time: 0.00001,

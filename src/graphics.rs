@@ -587,19 +587,19 @@ impl Graphics {
                     .build()
                     .unwrap();
 
-//                 command_buffer_builder = command_buffer_builder
-//                     .draw(
-//                         self.pipeline.clone(),
-//                         screen_dynamic_state.clone(),
-//                         vec![vertex_buffer.clone()],
-//                         (
-//                             camera_descriptor_set.clone(),
-//                             model_descriptor_set,
-//                             texture_descriptor_set.clone(),
-//                         ),
-//                         (),
-//                     )
-//                     .unwrap();
+                command_buffer_builder = command_buffer_builder
+                    .draw(
+                        self.pipeline.clone(),
+                        screen_dynamic_state.clone(),
+                        vec![vertex_buffer.clone()],
+                        (
+                            camera_descriptor_set.clone(),
+                            model_descriptor_set,
+                            texture_descriptor_set.clone(),
+                        ),
+                        (),
+                    )
+                    .unwrap();
             }
             for body in physic_bodies.join() {
                 let body = body.get(&physic_world);
