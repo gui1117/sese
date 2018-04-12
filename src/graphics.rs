@@ -20,6 +20,7 @@ use vulkano::image::ImageLayout;
 use vulkano::format::{ClearValue, Format};
 use vulkano;
 use alga::general::SubsetOf;
+use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use std::time::Duration;
 use specs::{Join, World};
@@ -62,7 +63,8 @@ pub struct Graphics {
     pub cylinder_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
-    pub tile_assets: HashMap<::maze::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>)>,
+    // TODO: maybe use an array
+    pub tile_assets: HashMap<::maze::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
 
     future: Option<Box<GpuFuture>>,
 }
@@ -360,7 +362,7 @@ impl Graphics {
 
             _futures.1.push(future);
 
-            tile_assets.insert(tile_size.clone(), (texture_descriptor_set, vertex_buffer));
+            tile_assets.insert(tile_size.clone(), (texture_descriptor_set, vertex_buffer, [0.0; 3]));
         }
 
         let unlocal_texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
@@ -376,7 +378,7 @@ impl Graphics {
 
         let future = Some(Box::new(now(device.clone())) as Box<_>);
 
-        Graphics {
+        let mut graphics = Graphics {
             future,
             device,
             queue,
@@ -395,6 +397,18 @@ impl Graphics {
 
             unlocal_texture_descriptor_set,
             tile_assets,
+        };
+
+        graphics.reset_tile_colors();
+
+        graphics
+    }
+
+    pub fn reset_tile_colors(&mut self) {
+        let mut colors = ::colors::GenPale::colors();
+        thread_rng().shuffle(&mut colors);
+        for tile in self.tile_assets.values_mut() {
+            tile.2 = colors.pop().unwrap().into();
         }
     }
 
@@ -515,7 +529,7 @@ impl Graphics {
             )
             .unwrap();
 
-        // Draw physic world
+        // Draw world
         {
             let physic_world = world.read_resource::<::resource::PhysicWorld>();
             let physic_bodies = world.read::<::component::PhysicBody>();
@@ -570,7 +584,7 @@ impl Graphics {
             );
 
             for tile in &world.read_resource::<::resource::Tiles>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer) = self.tile_assets[&tile.size];
+                let (ref texture_descriptor_set, ref vertex_buffer, color) = self.tile_assets[&tile.size];
 
                 let position: ::na::Transform3<f32> = tile.position.to_superset();
 
@@ -597,90 +611,94 @@ impl Graphics {
                             model_descriptor_set,
                             texture_descriptor_set.clone(),
                         ),
-                        (),
+                        color,
                     )
                     .unwrap();
             }
-            for body in physic_bodies.join() {
-                let body = body.get(&physic_world);
-                let shape = body.shape();
-                if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
-                    // TODO
-                } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>() {
-                    let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                        shape.radius(),
-                        shape.half_height(),
-                        shape.radius(),
-                        1.0,
-                    ));
 
-                    let position: ::na::Transform3<f32> = body.position().to_superset();
+            // Draw physic world
+            if false {
+                for body in physic_bodies.join() {
+                    let body = body.get(&physic_world);
+                    let shape = body.shape();
+                    if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
+                        // TODO
+                    } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>() {
+                        let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                            shape.radius(),
+                            shape.half_height(),
+                            shape.radius(),
+                            1.0,
+                        ));
 
-                    let model = self.model_buffer_pool
-                        .next(vs::ty::Model {
-                            model: (position.unwrap() * primitive_trans).into(),
-                        })
-                        .unwrap();
+                        let position: ::na::Transform3<f32> = body.position().to_superset();
 
-                    let model_descriptor_set = self.model_descriptor_sets_pool
-                        .next()
-                        .add_buffer(model)
-                        .unwrap()
-                        .build()
-                        .unwrap();
+                        let model = self.model_buffer_pool
+                            .next(vs::ty::Model {
+                                model: (position.unwrap() * primitive_trans).into(),
+                            })
+                            .unwrap();
 
-                    command_buffer_builder = command_buffer_builder
-                        .draw(
-                            self.pipeline.clone(),
-                            screen_dynamic_state.clone(),
-                            vec![self.cylinder_vertex_buffer.clone()],
-                            (
-                                camera_descriptor_set.clone(),
-                                model_descriptor_set,
-                                self.unlocal_texture_descriptor_set.clone(),
-                            ),
-                            (),
-                        )
-                        .unwrap();
-                } else if let Some(shape) =
-                    shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>()
-                {
-                    let radius = shape.half_extents();
-                    let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                        radius[0],
-                        radius[1],
-                        radius[2],
-                        1.0,
-                    ));
+                        let model_descriptor_set = self.model_descriptor_sets_pool
+                            .next()
+                            .add_buffer(model)
+                            .unwrap()
+                            .build()
+                            .unwrap();
 
-                    let position: ::na::Transform3<f32> = body.position().to_superset();
+                        command_buffer_builder = command_buffer_builder
+                            .draw(
+                                self.pipeline.clone(),
+                                screen_dynamic_state.clone(),
+                                vec![self.cylinder_vertex_buffer.clone()],
+                                (
+                                    camera_descriptor_set.clone(),
+                                    model_descriptor_set,
+                                    self.unlocal_texture_descriptor_set.clone(),
+                                ),
+                                [1.0, 0.0, 0.0],
+                            )
+                            .unwrap();
+                    } else if let Some(shape) =
+                        shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>()
+                    {
+                        let radius = shape.half_extents();
+                        let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                            radius[0],
+                            radius[1],
+                            radius[2],
+                            1.0,
+                        ));
 
-                    let model = self.model_buffer_pool
-                        .next(vs::ty::Model {
-                            model: (position.unwrap() * primitive_trans).into(),
-                        })
-                        .unwrap();
+                        let position: ::na::Transform3<f32> = body.position().to_superset();
 
-                    let model_descriptor_set = self.model_descriptor_sets_pool
-                        .next()
-                        .add_buffer(model)
-                        .unwrap()
-                        .build()
-                        .unwrap();
+                        let model = self.model_buffer_pool
+                            .next(vs::ty::Model {
+                                model: (position.unwrap() * primitive_trans).into(),
+                            })
+                            .unwrap();
 
-                    command_buffer_builder = command_buffer_builder
-                        .draw(
-                            self.pipeline.clone(),
-                            screen_dynamic_state.clone(),
-                            vec![self.cuboid_vertex_buffer.clone()],
-                            (
-                                camera_descriptor_set.clone(),
-                                model_descriptor_set,
-                                self.unlocal_texture_descriptor_set.clone(),
-                            ),
-                            (),
-                        )
-                        .unwrap();
+                        let model_descriptor_set = self.model_descriptor_sets_pool
+                            .next()
+                            .add_buffer(model)
+                            .unwrap()
+                            .build()
+                            .unwrap();
+
+                        command_buffer_builder = command_buffer_builder
+                            .draw(
+                                self.pipeline.clone(),
+                                screen_dynamic_state.clone(),
+                                vec![self.cuboid_vertex_buffer.clone()],
+                                (
+                                    camera_descriptor_set.clone(),
+                                    model_descriptor_set,
+                                    self.unlocal_texture_descriptor_set.clone(),
+                                ),
+                                [1.0, 0.0, 0.0],
+                            )
+                            .unwrap();
+                    }
                 }
             }
         }
@@ -737,17 +755,20 @@ mod fs {
 
 #version 450
 
+layout(push_constant) uniform Color {
+    vec3 color;
+} color;
+
 layout(location = 0) in vec2 v_tex_coords;
 
-layout(location = 0) out vec4 color;
+layout(location = 0) out vec4 out_color;
 
 layout(set = 2, binding = 0) uniform sampler2D tex;
 
 void main() {
-    vec3 red = vec3(1.0, 0.0, 0.0);
     vec3 black = vec3(0.0, 0.0, 0.0);
     float grey = texture(tex, v_tex_coords).r;
-    color = vec4(black*grey + red*(1.0 - grey), 1.0);
+    out_color = vec4(black*grey + color.color*(1.0 - grey), 1.0);
 }
     "]
     struct _Dummy;

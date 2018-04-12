@@ -30,6 +30,7 @@ extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
 
+mod colors;
 mod obj;
 mod texture;
 mod system;
