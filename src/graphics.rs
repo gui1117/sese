@@ -617,7 +617,7 @@ impl Graphics {
             }
 
             // Draw physic world
-            if false {
+            if true {
                 for body in physic_bodies.join() {
                     let body = body.get(&physic_world);
                     let shape = body.shape();
@@ -656,7 +656,7 @@ impl Graphics {
                                     model_descriptor_set,
                                     self.unlocal_texture_descriptor_set.clone(),
                                 ),
-                                [1.0, 0.0, 0.0],
+                                [1.0f32, 1.0, 1.0],
                             )
                             .unwrap();
                     } else if let Some(shape) =
@@ -695,7 +695,7 @@ impl Graphics {
                                     model_descriptor_set,
                                     self.unlocal_texture_descriptor_set.clone(),
                                 ),
-                                [1.0, 0.0, 0.0],
+                                [1.0f32, 1.0, 1.0],
                             )
                             .unwrap();
                     }
