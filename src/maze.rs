@@ -43,9 +43,56 @@ where
     neighbours: Vec<::na::VectorN<isize, D>>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, EnumIterator)]
+pub enum TileSize {
+    T1x1,
+    T1x2,
+    T2x1,
+    T2x2,
+    T2x3,
+    T3x2,
+    T3x3,
+}
+
+impl<'a> TileSize {
+    pub fn size(&self) -> (isize, isize) {
+        match *self {
+            TileSize::T1x1 => (1, 1),
+            TileSize::T1x2 => (1, 2),
+            TileSize::T2x1 => (2, 1),
+            TileSize::T2x2 => (2, 2),
+            TileSize::T2x3 => (2, 3),
+            TileSize::T3x2 => (3, 2),
+            TileSize::T3x3 => (3, 3),
+        }
+    }
+
+    pub fn width(&self) -> isize {
+        self.size().0
+    }
+
+    pub fn height(&self) -> isize {
+        self.size().1
+    }
+
+    fn from_size(width: isize, height: isize) -> Self {
+        match (width, height) {
+            (1, 1) => TileSize::T1x1,
+            (2, 1) => TileSize::T2x1,
+            (1, 2) => TileSize::T1x2,
+            (2, 2) => TileSize::T2x2,
+            (3, 2) => TileSize::T3x2,
+            (2, 3) => TileSize::T2x3,
+            (3, 3) => TileSize::T3x3,
+            _ => panic!("invalid tile size"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Tile {
     pub position: ::na::Isometry3<f32>,
+    pub size: TileSize,
     pub width: f32,
     pub height: f32,
 }
@@ -433,10 +480,14 @@ impl Maze<::na::U3> {
                     orientation(normal),
                 );
 
+                let width = (left.component_mul(&size)).iter().sum::<isize>().abs();
+                let height = (down.component_mul(&size)).iter().sum::<isize>().abs();
+
                 tiles.push(Tile {
                     position: position,
-                    width: (left.component_mul(&size)).iter().sum::<isize>().abs() as f32,
-                    height: (down.component_mul(&size)).iter().sum::<isize>().abs() as f32,
+                    size: TileSize::from_size(width, height),
+                    width: width as f32,
+                    height: height as f32,
                 });
             }
         }

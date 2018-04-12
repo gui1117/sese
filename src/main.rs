@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate enum_iterator_derive;
 extern crate alga;
 extern crate app_dirs2;
 #[macro_use]
@@ -28,6 +30,7 @@ extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
 
+mod obj;
 mod texture;
 mod system;
 mod component;

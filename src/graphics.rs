@@ -1,10 +1,10 @@
 use vulkano::device::{Device, DeviceExtensions, Queue};
 use vulkano::swapchain::{self, Surface, Swapchain, SwapchainCreationError};
 use vulkano::sampler::Sampler;
-use vulkano::image::{Dimensions, ImageUsage, ImmutableImage, MipmapsCount};
+use vulkano::image::{Dimensions, ImageUsage, ImmutableImage};
 use vulkano::image::attachment::AttachmentImage;
 use vulkano::image::swapchain::SwapchainImage;
-use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool, ImmutableBuffer};
+use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, LayoutAttachmentDescription,
                            LayoutPassDependencyDescription, LayoutPassDescription, LoadOp,
                            RenderPass, RenderPassDesc, RenderPassDescClearValues, StoreOp};
@@ -13,8 +13,7 @@ use vulkano::pipeline::viewport::Viewport;
 use vulkano::descriptor::descriptor_set::{DescriptorSet, FixedSizeDescriptorSetsPool,
                                           PersistentDescriptorSet};
 use vulkano::command_buffer::pool::standard::StandardCommandPoolAlloc;
-use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, CommandBuffer,
-                              DynamicState};
+use vulkano::command_buffer::{AutoCommandBuffer, AutoCommandBufferBuilder, DynamicState};
 use vulkano::instance::{PhysicalDevice, PhysicalDeviceType};
 use vulkano::sync::{now, GpuFuture};
 use vulkano::image::ImageLayout;
@@ -26,16 +25,17 @@ use std::time::Duration;
 use specs::{Join, World};
 use show_message::{OkOrShow, SomeOrShow};
 use std::f32::consts::PI;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
+    pub position: [f32; 3],
+    pub tex_coords: [f32; 2],
 }
 impl_vertex!(Vertex, position, tex_coords);
 
 impl Vertex {
-    fn new(position: [f32; 3], tex_coords: [f32; 2]) -> Self {
+    pub fn new(position: [f32; 3], tex_coords: [f32; 2]) -> Self {
         Vertex {
             position,
             tex_coords,
@@ -62,6 +62,7 @@ pub struct Graphics {
     pub cylinder_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
+    pub tile_assets: HashMap<::maze::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>)>,
 
     future: Option<Box<GpuFuture>>,
 }
@@ -304,51 +305,63 @@ impl Graphics {
                 ::image::FilterType::Lanczos3,
             );
 
-            let source = CpuAccessibleBuffer::from_iter(
-                queue.device().clone(),
-                BufferUsage::transfer_source(),
+            ImmutableImage::from_iter(
                 image.into_raw().iter().cloned(),
-            ).unwrap();
-
-            let usage = ImageUsage {
-                transfer_destination: true,
-                sampled: true,
-                ..ImageUsage::none()
-            };
-            let layout = ImageLayout::ShaderReadOnlyOptimal;
-
-            let (buffer, init) = ImmutableImage::uninitialized(
-                device.clone(),
                 dimensions,
                 Format::R8Unorm,
-                MipmapsCount::One,
-                usage,
-                layout,
-                device.active_queue_families(),
-            ).unwrap();
+                queue.clone(),
+            ).unwrap()
+        };
 
-            let cb = AutoCommandBufferBuilder::new(device.clone(), queue.family())
-                .unwrap()
-                .copy_buffer_to_image_dimensions(
-                    source,
-                    init,
-                    [0, 0, 0],
-                    dimensions.width_height_depth(),
-                    0,
-                    dimensions.array_layers_with_cube(),
-                    0,
+        let mut tile_assets = HashMap::new();
+        let mut _futures = (vec![], vec![]);
+        for tile_size in ::maze::TileSize::iter_variants() {
+            let dimensions = Dimensions::Dim2d {
+                width: ::CFG.unlocal_texture_size*tile_size.width() as u32,
+                height: ::CFG.unlocal_texture_size*tile_size.height() as u32,
+            };
+
+            let image = ::texture::generate_texture(
+                dimensions.width(),
+                dimensions.height(),
+                ::CFG.unlocal_texture_layers,
+                // IDEA: all are good but
+                // gaussian is too grey
+                // nearest looks pixelized
+                ::image::FilterType::Lanczos3,
+            );
+
+            let (texture, future) = ImmutableImage::from_iter(
+                image.into_raw().iter().cloned(),
+                dimensions,
+                Format::R8Unorm,
+                queue.clone(),
+            ).unwrap();
+            _futures.0.push(future);
+
+            let texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
+                .add_sampled_image(
+                    texture,
+                    Sampler::simple_repeat_linear(device.clone()),
                 )
                 .unwrap()
                 .build()
                 .unwrap();
 
-            let future = match cb.execute(queue.clone()) {
-                Ok(f) => f,
-                Err(_) => unreachable!(),
-            };
+            let texture_descriptor_set = Arc::new(texture_descriptor_set) as Arc<_>;
 
-            (buffer, future)
-        };
+            let (vertex_buffer, future) = ImmutableBuffer::from_iter(
+                ::obj::generate_tile(tile_size.width(), tile_size.height())
+                    .iter()
+                    .cloned(),
+                BufferUsage::vertex_buffer(),
+                queue.clone(),
+            ).unwrap();
+
+            _futures.1.push(future);
+
+            tile_assets.insert(tile_size.clone(), (texture_descriptor_set, vertex_buffer));
+        }
 
         let unlocal_texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
             .add_sampled_image(
@@ -381,6 +394,7 @@ impl Graphics {
             cylinder_vertex_buffer,
 
             unlocal_texture_descriptor_set,
+            tile_assets,
         }
     }
 
@@ -556,18 +570,13 @@ impl Graphics {
             );
 
             for tile in &world.read_resource::<::resource::Tiles>().0 {
-                let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                    tile.width / 2.0,
-                    tile.height / 2.0,
-                    0.1,
-                    1.0,
-                ));
+                let (ref texture_descriptor_set, ref vertex_buffer) = self.tile_assets[&tile.size];
 
                 let position: ::na::Transform3<f32> = tile.position.to_superset();
 
                 let model = self.model_buffer_pool
                     .next(vs::ty::Model {
-                        model: (position.unwrap() * primitive_trans).into(),
+                        model: position.unwrap().into(),
                     })
                     .unwrap();
 
@@ -578,19 +587,19 @@ impl Graphics {
                     .build()
                     .unwrap();
 
-                command_buffer_builder = command_buffer_builder
-                    .draw(
-                        self.pipeline.clone(),
-                        screen_dynamic_state.clone(),
-                        vec![self.cuboid_vertex_buffer.clone()],
-                        (
-                            camera_descriptor_set.clone(),
-                            model_descriptor_set,
-                            self.unlocal_texture_descriptor_set.clone(),
-                        ),
-                        (),
-                    )
-                    .unwrap();
+//                 command_buffer_builder = command_buffer_builder
+//                     .draw(
+//                         self.pipeline.clone(),
+//                         screen_dynamic_state.clone(),
+//                         vec![vertex_buffer.clone()],
+//                         (
+//                             camera_descriptor_set.clone(),
+//                             model_descriptor_set,
+//                             texture_descriptor_set.clone(),
+//                         ),
+//                         (),
+//                     )
+//                     .unwrap();
             }
             for body in physic_bodies.join() {
                 let body = body.get(&physic_world);

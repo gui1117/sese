@@ -1,7 +1,12 @@
 # Todo
 
+* import tiles from obj
+* finir affichage tuiles rajoutant enum pour les tuiles et faisant texture pour chaque enum
+* faire colonnes et vaisseau
 * faire le placement joli de la caméra (slider faust....)
 * faire monstres
+
+* faire 3 vues et toile
 
 # Barres
 
@@ -88,6 +93,8 @@ le mouvement peut être adouci avec un filtre passe bas ou tru du genre (comme l
 peut être un écran qui montre le filet ou pas et dans quel sens ?
 
 # gameplay
+
+* aussi faire qu'on peut tirer pour aider ses alliés a avancer
 
 * faire que y'a toujours une vitesse comme dans rayman mais on peut aussi mettre le turbo
   est-ce que le turbo devrait aussi affecter le fait de tourner (tourner plus rapide ?)
