@@ -22,21 +22,21 @@ const TILE: [Vertex; 36] = [
     // Sides
     // x=[0.5, 0.6], y=[0.0, 0.5]
     Vertex { position: [-1.0, -1.0, -0.05], tex_coords: [0.5, 0.0] },
-    Vertex { position: [-1.0, -1.0, 0.05], tex_coords: [0.5, 0.5] },
-    Vertex { position: [-1.0, 1.0, -0.05], tex_coords: [0.6, 0.5] },
+    Vertex { position: [-1.0, -1.0, 0.05], tex_coords: [0.6, 0.0] },
+    Vertex { position: [-1.0, 1.0, -0.05], tex_coords: [0.5, 0.5] },
 
-    Vertex { position: [-1.0, -1.0, 0.05], tex_coords: [0.5, 0.5] },
+    Vertex { position: [-1.0, -1.0, 0.05], tex_coords: [0.6, 0.0] },
     Vertex { position: [-1.0, 1.0, 0.05], tex_coords: [0.6, 0.5] },
-    Vertex { position: [-1.0, 1.0, -0.05], tex_coords: [0.6, 0.0] },
+    Vertex { position: [-1.0, 1.0, -0.05], tex_coords: [0.5, 0.5] },
 
     // x=[0.6, 0.7], y=[0.0, 0.5]
-    Vertex { position: [1.0, -1.0, 0.05], tex_coords: [0.6, 0.5] },
+    Vertex { position: [1.0, -1.0, 0.05], tex_coords: [0.7, 0.0] },
     Vertex { position: [1.0, -1.0, -0.05], tex_coords: [0.6, 0.0] },
-    Vertex { position: [1.0, 1.0, -0.05], tex_coords: [0.7, 0.0] },
+    Vertex { position: [1.0, 1.0, -0.05], tex_coords: [0.6, 0.5] },
 
     Vertex { position: [1.0, 1.0, 0.05], tex_coords: [0.7, 0.5] },
-    Vertex { position: [1.0, -1.0, 0.05], tex_coords: [0.6, 0.5] },
-    Vertex { position: [1.0, 1.0, -0.05], tex_coords: [0.7, 0.0] },
+    Vertex { position: [1.0, -1.0, 0.05], tex_coords: [0.7, 0.0] },
+    Vertex { position: [1.0, 1.0, -0.05], tex_coords: [0.6, 0.5] },
 
     // x=[0.5, 1.0], y=[0.5, 0.6]
     Vertex { position: [-1.0, -1.0, -0.05], tex_coords: [0.5, 0.5] },

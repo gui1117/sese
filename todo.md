@@ -1,6 +1,6 @@
 # Todo
 
-* solve draws and load texture from files instead of creating them
+* load texture from files instead of creating them
 * faire colonnes et vaisseau
 * faire le placement joli de la caméra (slider faust....)
 * faire monstres
