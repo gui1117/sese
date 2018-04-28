@@ -1,9 +1,9 @@
-#[macro_use]
-extern crate enum_iterator_derive;
 extern crate alga;
 extern crate app_dirs2;
 #[macro_use]
 extern crate derive_deref;
+#[macro_use]
+extern crate enum_iterator_derive;
 extern crate failure;
 extern crate fps_counter;
 extern crate generic_array;

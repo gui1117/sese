@@ -11,13 +11,9 @@ pub fn generate_texture(
     let mut rng = ::rand::thread_rng();
     let mut deepness = layers - 1;
 
-    let tmp_width = if absissa_continuous {
-        width * 2
-    } else {
-        width
-    };
+    let tmp_width = if absissa_continuous { width * 2 } else { width };
 
-    let mut images: Vec<::image::ImageBuffer<::image::Luma<u8>, _>>= vec![];
+    let mut images: Vec<::image::ImageBuffer<::image::Luma<u8>, _>> = vec![];
     while deepness != 0 {
         deepness -= 1;
         let factor = 2_u32.pow(deepness);
@@ -30,17 +26,14 @@ pub fn generate_texture(
             .map(|_| u8::rand(&mut rng))
             .collect::<Vec<_>>();
 
-        let image = ::image::ImageBuffer::from_vec(sub_image_width, sub_image_height, data).unwrap();
+        let image =
+            ::image::ImageBuffer::from_vec(sub_image_width, sub_image_height, data).unwrap();
         let image = ::image::imageops::resize(&image, tmp_width, height, filter);
 
         images.push(image);
     }
 
-    let x_delta = if absissa_continuous {
-        width/2
-    } else {
-        0
-    };
+    let x_delta = if absissa_continuous { width / 2 } else { 0 };
 
     ::image::ImageBuffer::from_fn(width, height, |x, y| {
         let data = images

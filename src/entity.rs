@@ -44,10 +44,7 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
 }
 
 pub fn create_column(pos: ::na::Isometry3<f32>, size: f32, world: &mut ::specs::World) {
-    let shape = ::ncollide::shape::Cylinder::new(
-        size / 2.0,
-        ::CFG.column_inner_radius,
-    );
+    let shape = ::ncollide::shape::Cylinder::new(size / 2.0, ::CFG.column_inner_radius);
     let mut body = ::nphysics::object::RigidBody::new_static(shape, 0.0, 0.0);
     body.set_transformation(pos);
 

@@ -390,8 +390,7 @@ pub fn build_maze(maze: &::maze::Maze<::na::U3>) -> Vec<Tile> {
                 z_max = z_max.max(face.position[2]);
             }
 
-            let size =
-                ::na::Vector3::new(x_max - x_min + 1, y_max - y_min + 1, z_max - z_min + 1);
+            let size = ::na::Vector3::new(x_max - x_min + 1, y_max - y_min + 1, z_max - z_min + 1);
 
             let translation = ::na::Vector3::new(
                 x_min as f32 + size[0] as f32 / 2.0 + normal[0] as f32 / 2.0,

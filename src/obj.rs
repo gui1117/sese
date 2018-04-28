@@ -1,4 +1,4 @@
-use ::graphics::Vertex;
+use graphics::Vertex;
 use std::f32::consts::PI;
 
 const THICKNESS: f32 = 0.05;
@@ -66,25 +66,25 @@ pub fn generate_tile(width: isize, height: isize) -> Vec<Vertex> {
         .cloned()
         .map(|mut vertex| {
             if vertex.tex_coords[0] == 0.6 {
-                vertex.tex_coords[0] = 0.5 + THICKNESS/width as f32;
+                vertex.tex_coords[0] = 0.5 + THICKNESS / width as f32;
             }
             if vertex.tex_coords[0] == 0.7 {
-                vertex.tex_coords[0] = 0.5 + THICKNESS*2.0/width as f32;
+                vertex.tex_coords[0] = 0.5 + THICKNESS * 2.0 / width as f32;
             }
             if vertex.tex_coords[1] == 0.6 {
-                vertex.tex_coords[1] = 0.5 + THICKNESS/height as f32;
+                vertex.tex_coords[1] = 0.5 + THICKNESS / height as f32;
             }
             if vertex.tex_coords[1] == 0.7 {
-                vertex.tex_coords[1] = 0.5 + THICKNESS*2.0/height as f32;
+                vertex.tex_coords[1] = 0.5 + THICKNESS * 2.0 / height as f32;
             }
             // IDEA: unaligned tiles can be cool
-            vertex.position[0] *= width as f32/2.0;
-            vertex.position[1] *= height as f32/2.0;
+            vertex.position[0] *= width as f32 / 2.0;
+            vertex.position[1] *= height as f32 / 2.0;
 
-            vertex.position[0] = vertex.position[0] - vertex.position[0].signum()*0.05;
-            vertex.position[1] = vertex.position[1] - vertex.position[1].signum()*0.05;
+            vertex.position[0] = vertex.position[0] - vertex.position[0].signum() * 0.05;
+            vertex.position[1] = vertex.position[1] - vertex.position[1].signum() * 0.05;
 
-            vertex.position[2] = vertex.position[2].signum()*THICKNESS/2.0;
+            vertex.position[2] = vertex.position[2].signum() * THICKNESS / 2.0;
 
             vertex
         })

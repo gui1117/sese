@@ -26,7 +26,6 @@ fn alignment() {
     assert!(GenPale::Black as usize = GEN_PALE_DIVISION);
 }
 
-
 impl GenPale {
     // all colors, not black nor white
     pub fn colors() -> Vec<Self> {
@@ -35,7 +34,8 @@ impl GenPale {
 }
 
 lazy_static! {
-   static ref  GEN_PALE_GENERATION: Vec<[f32; 3]> = generate_colors(GEN_PALE_DIVISION, GEN_PALE_DELTA, GEN_PALE_BLACK, GEN_PALE_WHITE);
+   static ref  GEN_PALE_GENERATION: Vec<[f32; 3]> =
+       generate_colors(GEN_PALE_DIVISION, GEN_PALE_DELTA, GEN_PALE_BLACK, GEN_PALE_WHITE);
 }
 
 impl Into<[f32; 3]> for GenPale {
@@ -49,25 +49,17 @@ fn generate_colors(division: usize, delta: f32, black: f32, white: f32) -> Vec<[
     assert!(black < white);
 
     // Black
-    colors.push([
-        black,
-        black,
-        black,
-    ]);
+    colors.push([black, black, black]);
 
     // White
-    colors.push([
-        white,
-        white,
-        white,
-    ]);
+    colors.push([white, white, white]);
 
     for i in 0..division {
         let color = color_circle((i as f32 + delta) / division as f32);
         colors.push([
-            color[0]*(white-black)+black,
-            color[1]*(white-black)+black,
-            color[2]*(white-black)+black,
+            color[0] * (white - black) + black,
+            color[1] * (white - black) + black,
+            color[2] * (white - black) + black,
         ]);
     }
 
@@ -75,24 +67,23 @@ fn generate_colors(division: usize, delta: f32, black: f32, white: f32) -> Vec<[
 }
 
 fn color_circle(x: f32) -> [f32; 3] {
-    if x*6.0 < 1.0 {
-        let t = x*6.0;
+    if x * 6.0 < 1.0 {
+        let t = x * 6.0;
         [1.0, t, 0.0]
-    } else if x*6.0 < 2.0 {
-        let t = x*6.0-1.0;
-        [1.0-t, 1.0, 0.0]
-    } else if x*6.0 < 3.0 {
-        let t = x*6.0-2.0;
+    } else if x * 6.0 < 2.0 {
+        let t = x * 6.0 - 1.0;
+        [1.0 - t, 1.0, 0.0]
+    } else if x * 6.0 < 3.0 {
+        let t = x * 6.0 - 2.0;
         [0.0, 1.0, t]
-    } else if x*6.0 < 4.0 {
-        let t = x*6.0-3.0;
-        [0.0, 1.0-t, 1.0]
-    } else if x*6.0 < 5.0 {
-        let t = x*6.0-4.0;
+    } else if x * 6.0 < 4.0 {
+        let t = x * 6.0 - 3.0;
+        [0.0, 1.0 - t, 1.0]
+    } else if x * 6.0 < 5.0 {
+        let t = x * 6.0 - 4.0;
         [t, 0.0, 1.0]
     } else {
-        let t = x*6.0-5.0;
-        [1.0, 0.0, 1.0-t]
+        let t = x * 6.0 - 5.0;
+        [1.0, 0.0, 1.0 - t]
     }
 }
-

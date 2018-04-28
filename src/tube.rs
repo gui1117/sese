@@ -41,7 +41,7 @@ pub fn build_column(position: ::na::Isometry3<f32>, size: isize) -> Vec<Tube> {
         let tube_size = Range::new(1, 3.min(remaining_size) + 1).ind_sample(&mut rng);
         let dl = (size - remaining_size) as f32 - size as f32 / 2.0 + tube_size as f32 / 2.0;
         let direction = position.rotation * ::na::Vector3::y();
-        let translation = ::na::Translation::from_vector(direction*dl);
+        let translation = ::na::Translation::from_vector(direction * dl);
         let tube_position = position.append_translation(&translation);
 
         tubes.push(Tube {

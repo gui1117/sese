@@ -324,8 +324,8 @@ impl Graphics {
         let mut _futures = (vec![], vec![]);
         for tile_size in ::tile::TileSize::iter_variants() {
             let dimensions = Dimensions::Dim2d {
-                width: ::CFG.unlocal_texture_size*tile_size.width() as u32,
-                height: ::CFG.unlocal_texture_size*tile_size.height() as u32,
+                width: ::CFG.unlocal_texture_size * tile_size.width() as u32,
+                height: ::CFG.unlocal_texture_size * tile_size.height() as u32,
             };
 
             let image = ::texture::generate_texture(
@@ -345,10 +345,7 @@ impl Graphics {
             _futures.0.push(future);
 
             let texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
-                .add_sampled_image(
-                    texture,
-                    Sampler::simple_repeat_linear(device.clone()),
-                )
+                .add_sampled_image(texture, Sampler::simple_repeat_linear(device.clone()))
                 .unwrap()
                 .build()
                 .unwrap();
@@ -365,14 +362,18 @@ impl Graphics {
 
             _futures.1.push(future);
 
-            tile_assets.insert(tile_size.clone(), (texture_descriptor_set, vertex_buffer, [0.0; 3]));
+            tile_assets.insert(
+                tile_size.clone(),
+                (texture_descriptor_set, vertex_buffer, [0.0; 3]),
+            );
         }
 
         let mut tube_assets = HashMap::new();
         for tube_size in ::tube::TubeSize::iter_variants() {
             let dimensions = Dimensions::Dim2d {
-                width: (::CFG.unlocal_texture_size as f32 * 2.0 * PI * ::CFG.column_outer_radius) as u32,
-                height: ::CFG.unlocal_texture_size*tube_size.size() as u32,
+                width: (::CFG.unlocal_texture_size as f32 * 2.0 * PI * ::CFG.column_outer_radius)
+                    as u32,
+                height: ::CFG.unlocal_texture_size * tube_size.size() as u32,
             };
 
             let image = ::texture::generate_texture(
@@ -392,10 +393,7 @@ impl Graphics {
             _futures.0.push(future);
 
             let texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
-                .add_sampled_image(
-                    texture,
-                    Sampler::simple_repeat_linear(device.clone()),
-                )
+                .add_sampled_image(texture, Sampler::simple_repeat_linear(device.clone()))
                 .unwrap()
                 .build()
                 .unwrap();
@@ -403,16 +401,17 @@ impl Graphics {
             let texture_descriptor_set = Arc::new(texture_descriptor_set) as Arc<_>;
 
             let (vertex_buffer, future) = ImmutableBuffer::from_iter(
-                ::obj::generate_tube(tube_size.size())
-                    .iter()
-                    .cloned(),
+                ::obj::generate_tube(tube_size.size()).iter().cloned(),
                 BufferUsage::vertex_buffer(),
                 queue.clone(),
             ).unwrap();
 
             _futures.1.push(future);
 
-            tube_assets.insert(tube_size.clone(), (texture_descriptor_set, vertex_buffer, [0.0; 3]));
+            tube_assets.insert(
+                tube_size.clone(),
+                (texture_descriptor_set, vertex_buffer, [0.0; 3]),
+            );
         }
 
         let unlocal_texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
@@ -638,7 +637,8 @@ impl Graphics {
             );
 
             for tile in &world.read_resource::<::resource::Tiles>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer, color) = self.tile_assets[&tile.size];
+                let (ref texture_descriptor_set, ref vertex_buffer, color) =
+                    self.tile_assets[&tile.size];
 
                 let position: ::na::Transform3<f32> = tile.position.to_superset();
 
@@ -671,7 +671,8 @@ impl Graphics {
             }
 
             for tube in &world.read_resource::<::resource::Tubes>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer, color) = self.tube_assets[&tube.tube_size];
+                let (ref texture_descriptor_set, ref vertex_buffer, color) =
+                    self.tube_assets[&tube.tube_size];
 
                 let position: ::na::Transform3<f32> = tube.position.to_superset();
 
@@ -710,7 +711,8 @@ impl Graphics {
                     let shape = body.shape();
                     if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
                         // TODO
-                    } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>() {
+                    } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>()
+                    {
                         let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
                             shape.radius(),
                             shape.half_height(),
