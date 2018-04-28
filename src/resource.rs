@@ -14,7 +14,10 @@ pub struct PlayersEntities(pub [Option<::specs::Entity>; 3]);
 pub struct UpdateTime(pub f32);
 
 #[derive(Deref, DerefMut)]
-pub struct Tiles(pub Vec<::maze::Tile>);
+pub struct Tiles(pub Vec<::tile::Tile>);
+
+#[derive(Deref, DerefMut)]
+pub struct Tubes(pub Vec<::tube::Tube>);
 
 const APP_INFO: AppInfo = AppInfo {
     name: "SESE",

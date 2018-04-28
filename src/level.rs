@@ -41,7 +41,7 @@ impl LevelBuilder {
             ::entity::create_wall(::util::to_world(&wall, self.unit), color, world);
         }
 
-        let mut tiles = maze.build_tiles();
+        let mut tiles = ::tile::build_maze(&maze);
         for tile in &mut tiles {
             tile.position.translation.vector *= self.unit;
             tile.width *= self.unit;
@@ -50,6 +50,7 @@ impl LevelBuilder {
         world.add_resource(::resource::Tiles(tiles));
 
         // Build columns
+        let mut tubes = vec![];
         for _ in 0..self.columns {
             let translation = ::na::Vector3::from_iterator(
                 maze.size()
@@ -69,9 +70,17 @@ impl LevelBuilder {
             let position =
                 ::na::Isometry3::from_parts(::na::Translation::from_vector(translation), rotation);
 
-            let maze_size = maze.size().iter().cloned().max().unwrap() as f32 * self.unit;
-            ::entity::create_column(position, maze_size, world);
+            let maze_size = maze.size().iter().cloned().max().unwrap();
+            let size = (maze_size as f32 * 2_f32.sqrt()).ceil() as isize;
+            tubes.extend(::tube::build_column(position, size));
+
+            ::entity::create_column(position, size as f32 * self.unit, world);
         }
+        for tube in &mut tubes {
+            tube.position.translation.vector *= self.unit;
+            tube.size *= self.unit;
+        }
+        world.add_resource(::resource::Tubes(tubes));
 
         // Build monsters
         let player_distance = 3;

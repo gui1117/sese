@@ -63,8 +63,10 @@ pub struct Graphics {
     pub cylinder_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
+
     // TODO: maybe use an array
-    pub tile_assets: HashMap<::maze::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
+    pub tile_assets: HashMap<::tile::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
+    pub tube_assets: HashMap<::tube::TubeSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
 
     future: Option<Box<GpuFuture>>,
 }
@@ -291,6 +293,11 @@ impl Graphics {
         let (framebuffers, ()) =
             Graphics::framebuffers_and_descriptors(&device, &images, &render_pass);
 
+        // IDEA: all are good but
+        // gaussian is too grey
+        // nearest looks pixelized
+        let texture_generation_filter = ::image::FilterType::Lanczos3;
+
         let (unlocal_texture, _future) = {
             let dimensions = Dimensions::Dim2d {
                 width: ::CFG.unlocal_texture_size,
@@ -301,10 +308,8 @@ impl Graphics {
                 dimensions.width(),
                 dimensions.height(),
                 ::CFG.unlocal_texture_layers,
-                // IDEA: all are good but
-                // gaussian is too grey
-                // nearest looks pixelized
-                ::image::FilterType::Lanczos3,
+                texture_generation_filter,
+                false,
             );
 
             ImmutableImage::from_iter(
@@ -317,7 +322,7 @@ impl Graphics {
 
         let mut tile_assets = HashMap::new();
         let mut _futures = (vec![], vec![]);
-        for tile_size in ::maze::TileSize::iter_variants() {
+        for tile_size in ::tile::TileSize::iter_variants() {
             let dimensions = Dimensions::Dim2d {
                 width: ::CFG.unlocal_texture_size*tile_size.width() as u32,
                 height: ::CFG.unlocal_texture_size*tile_size.height() as u32,
@@ -327,10 +332,8 @@ impl Graphics {
                 dimensions.width(),
                 dimensions.height(),
                 ::CFG.unlocal_texture_layers,
-                // IDEA: all are good but
-                // gaussian is too grey
-                // nearest looks pixelized
-                ::image::FilterType::Lanczos3,
+                texture_generation_filter,
+                false,
             );
 
             let (texture, future) = ImmutableImage::from_iter(
@@ -365,6 +368,53 @@ impl Graphics {
             tile_assets.insert(tile_size.clone(), (texture_descriptor_set, vertex_buffer, [0.0; 3]));
         }
 
+        let mut tube_assets = HashMap::new();
+        for tube_size in ::tube::TubeSize::iter_variants() {
+            let dimensions = Dimensions::Dim2d {
+                width: (::CFG.unlocal_texture_size as f32 * 2.0 * PI * ::CFG.column_outer_radius) as u32,
+                height: ::CFG.unlocal_texture_size*tube_size.size() as u32,
+            };
+
+            let image = ::texture::generate_texture(
+                dimensions.width(),
+                dimensions.height(),
+                ::CFG.unlocal_texture_layers,
+                texture_generation_filter,
+                true,
+            );
+
+            let (texture, future) = ImmutableImage::from_iter(
+                image.into_raw().iter().cloned(),
+                dimensions,
+                Format::R8Unorm,
+                queue.clone(),
+            ).unwrap();
+            _futures.0.push(future);
+
+            let texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
+                .add_sampled_image(
+                    texture,
+                    Sampler::simple_repeat_linear(device.clone()),
+                )
+                .unwrap()
+                .build()
+                .unwrap();
+
+            let texture_descriptor_set = Arc::new(texture_descriptor_set) as Arc<_>;
+
+            let (vertex_buffer, future) = ImmutableBuffer::from_iter(
+                ::obj::generate_tube(tube_size.size())
+                    .iter()
+                    .cloned(),
+                BufferUsage::vertex_buffer(),
+                queue.clone(),
+            ).unwrap();
+
+            _futures.1.push(future);
+
+            tube_assets.insert(tube_size.clone(), (texture_descriptor_set, vertex_buffer, [0.0; 3]));
+        }
+
         let unlocal_texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
             .add_sampled_image(
                 unlocal_texture,
@@ -397,18 +447,22 @@ impl Graphics {
 
             unlocal_texture_descriptor_set,
             tile_assets,
+            tube_assets,
         };
 
-        graphics.reset_tile_colors();
+        graphics.reset_colors();
 
         graphics
     }
 
-    pub fn reset_tile_colors(&mut self) {
+    pub fn reset_colors(&mut self) {
         let mut colors = ::colors::GenPale::colors();
         thread_rng().shuffle(&mut colors);
         for tile in self.tile_assets.values_mut() {
             tile.2 = colors.pop().unwrap().into();
+        }
+        for column in self.tube_assets.values_mut() {
+            column.2 = colors.pop().unwrap().into();
         }
     }
 
@@ -587,6 +641,39 @@ impl Graphics {
                 let (ref texture_descriptor_set, ref vertex_buffer, color) = self.tile_assets[&tile.size];
 
                 let position: ::na::Transform3<f32> = tile.position.to_superset();
+
+                let model = self.model_buffer_pool
+                    .next(vs::ty::Model {
+                        model: position.unwrap().into(),
+                    })
+                    .unwrap();
+
+                let model_descriptor_set = self.model_descriptor_sets_pool
+                    .next()
+                    .add_buffer(model)
+                    .unwrap()
+                    .build()
+                    .unwrap();
+
+                command_buffer_builder = command_buffer_builder
+                    .draw(
+                        self.pipeline.clone(),
+                        screen_dynamic_state.clone(),
+                        vec![vertex_buffer.clone()],
+                        (
+                            camera_descriptor_set.clone(),
+                            model_descriptor_set,
+                            texture_descriptor_set.clone(),
+                        ),
+                        color,
+                    )
+                    .unwrap();
+            }
+
+            for tube in &world.read_resource::<::resource::Tubes>().0 {
+                let (ref texture_descriptor_set, ref vertex_buffer, color) = self.tube_assets[&tube.tube_size];
+
+                let position: ::na::Transform3<f32> = tube.position.to_superset();
 
                 let model = self.model_buffer_pool
                     .next(vs::ty::Model {

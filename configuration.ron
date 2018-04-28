@@ -2,7 +2,7 @@ Configuration(
     fps: 60,
 
     unlocal_texture_size: 128,//512
-    unlocal_texture_layers: 4,//11
+    unlocal_texture_layers: 9,//11
 
     physic_max_step_time: 0.008,
     physic_min_step_time: 0.00001,
@@ -13,6 +13,7 @@ Configuration(
     flight_control_direction_force: 10.0,
     flight_control_default_power_force: 0.0,//500.0,
 
-    column_radius: 0.1,
+    column_inner_radius: 0.1,
+    column_outer_radius: 0.105,
     column_size_factor: 1.2,
 )

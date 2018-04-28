@@ -1,11 +1,49 @@
+# POUR LES BARRES
+
+on prend deux blocs par mur et ensuite on les relie pour que ça fasse un tour
+
+# gameplay
+
+* des lanceurs de roquette
+* des mines que si on va trop près on s'explose dessus
+* on peut tirer sur les mines et roquette ? permet d'aider les moins forts, juste les roquette peut être
+* des boules a prendre et des boules qui s'échappe quand on s'approche et des boules qui font des tours
+
 # Todo
 
-* load texture from files instead of creating them
-* faire colonnes et vaisseau
+* corriger bug une face n'apparait pas
+* colonnes faire texture continue
+* colonnes changer dessin c'est pas très joli
+  peut être faire ques des clonnes droites
+* génération de colonnes:
+  * faire que elles partent de surface vers une autre surface
+    sans intersection ?
+    sans intersection avec mur ?
+    sans intersection avec colonne ?
+* faire skybox ou juste couleur de fond: voie lactée peut être
+* faire vaisseau
 * faire le placement joli de la caméra (slider faust....)
 * faire monstres
 
 * faire 3 vues et toile
+
+* des barress en métal avec texture de rouille:
+  disposé de telle facon que ça relie tout les blocs
+  maze: nombre de reliure (1 mini plutot)
+
+# polish
+
+* on peut faire un grande texture avec bruit de perlin
+  et on découpe à l'interieur
+
+# finalement gameplay
+
+faire 1 ou 2 ou 3 joueurs
+avec 1 joueurs il faut passer dedans ou truc comme ça
+avec 2 joueurs il y a un fil
+avec 3 joueurs ça crée un "réseaux" (peut être cercle inscrit)
+
+boules qu'il faut attraper qui bouge: pour trouver un chemin faire astar avec chemin le plus couteux
 
 # Barres
 

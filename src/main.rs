@@ -30,6 +30,8 @@ extern crate vulkano_shader_derive;
 extern crate vulkano_win;
 extern crate winit;
 
+mod tube;
+mod tile;
 mod colors;
 mod obj;
 mod texture;
@@ -99,9 +101,7 @@ fn main() {
 
     let mut update_dispatcher = DispatcherBuilder::new()
         .add(::system::physic::PhysicSystem, "physic", &[])
-        // .add(::system::GravitySystem, "gravity", &[])
         .add_barrier() // Draw barrier
-        // .add(::system::AnimationSystem, "animation", &[])
         .build();
 
     let frame_duration = Duration::new(0, (1_000_000_000.0 / ::CFG.fps as f32) as u32);

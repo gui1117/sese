@@ -27,8 +27,9 @@ pub struct Configuration {
     pub flight_control_direction_force: f32,
     pub flight_control_default_power_force: f32,
 
-    pub column_radius: f32,
     pub column_size_factor: f32,
+    pub column_inner_radius: f32,
+    pub column_outer_radius: f32,
 }
 
 impl Configuration {
