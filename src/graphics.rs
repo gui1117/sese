@@ -42,6 +42,27 @@ impl Vertex {
             tex_coords,
         }
     }
+
+    pub fn from_obj(obj: String) -> Vec<Vertex> {
+        // TODO: tex coords
+        let ref obj = ::wavefront_obj::obj::parse(obj).unwrap().objects[0];
+        obj.geometry.iter()
+            .flat_map(|geometry| {
+                geometry.shapes.iter()
+                    .flat_map(|shape| match shape.primitive {
+                        ::wavefront_obj::obj::Primitive::Triangle(a, b, c) => vec![a, b, c],
+                        _ => unimplemented!(),
+                    })
+                .map(|(vertex_index, _, _)| {
+                    let v = obj.vertices[vertex_index];
+                    Vertex {
+                        position: [v.x as f32, v.y as f32, v.z as f32],
+                        tex_coords: [0.0, 0.0],
+                    }
+                })
+            })
+            .collect()
+    }
 }
 
 pub struct Graphics {
@@ -66,7 +87,7 @@ pub struct Graphics {
 
     // TODO: maybe use an array
     pub tile_assets: HashMap<::tile::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
-    pub tube_assets: HashMap<::tube::TubeSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
+    pub tube_assets: HashMap<::tube::Shape, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>)>,
 
     future: Option<Box<GpuFuture>>,
 }
@@ -369,11 +390,11 @@ impl Graphics {
         }
 
         let mut tube_assets = HashMap::new();
-        for tube_size in ::tube::TubeSize::iter_variants() {
+        for shape in ::tube::Shape::iter_variants() {
+            // TODO: load from file
             let dimensions = Dimensions::Dim2d {
-                width: (::CFG.unlocal_texture_size as f32 * 2.0 * PI * ::CFG.column_outer_radius)
-                    as u32,
-                height: ::CFG.unlocal_texture_size * tube_size.size() as u32,
+                width: ::CFG.unlocal_texture_size as u32,
+                height: ::CFG.unlocal_texture_size as u32,
             };
 
             let image = ::texture::generate_texture(
@@ -381,7 +402,7 @@ impl Graphics {
                 dimensions.height(),
                 ::CFG.unlocal_texture_layers,
                 texture_generation_filter,
-                true,
+                false,
             );
 
             let (texture, future) = ImmutableImage::from_iter(
@@ -401,7 +422,7 @@ impl Graphics {
             let texture_descriptor_set = Arc::new(texture_descriptor_set) as Arc<_>;
 
             let (vertex_buffer, future) = ImmutableBuffer::from_iter(
-                ::obj::generate_tube(tube_size.size()).iter().cloned(),
+                Vertex::from_obj(shape.obj()).iter().cloned(),
                 BufferUsage::vertex_buffer(),
                 queue.clone(),
             ).unwrap();
@@ -409,8 +430,8 @@ impl Graphics {
             _futures.1.push(future);
 
             tube_assets.insert(
-                tube_size.clone(),
-                (texture_descriptor_set, vertex_buffer, [0.0; 3]),
+                shape.clone(),
+                (texture_descriptor_set, vertex_buffer),
             );
         }
 
@@ -459,9 +480,6 @@ impl Graphics {
         thread_rng().shuffle(&mut colors);
         for tile in self.tile_assets.values_mut() {
             tile.2 = colors.pop().unwrap().into();
-        }
-        for column in self.tube_assets.values_mut() {
-            column.2 = colors.pop().unwrap().into();
         }
     }
 
@@ -671,8 +689,8 @@ impl Graphics {
             }
 
             for tube in &world.read_resource::<::resource::Tubes>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer, color) =
-                    self.tube_assets[&tube.tube_size];
+                let (ref texture_descriptor_set, ref vertex_buffer) =
+                    self.tube_assets[&tube.shape];
 
                 let position: ::na::Transform3<f32> = tube.position.to_superset();
 
@@ -699,7 +717,7 @@ impl Graphics {
                             model_descriptor_set,
                             texture_descriptor_set.clone(),
                         ),
-                        color,
+                        [1.0f32, 1.0, 1.0],
                     )
                     .unwrap();
             }

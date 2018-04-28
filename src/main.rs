@@ -9,6 +9,7 @@ extern crate fps_counter;
 extern crate generic_array;
 extern crate gilrs;
 extern crate image;
+extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 extern crate nalgebra as na;
@@ -28,6 +29,7 @@ extern crate vulkano;
 #[macro_use]
 extern crate vulkano_shader_derive;
 extern crate vulkano_win;
+extern crate wavefront_obj;
 extern crate winit;
 
 mod tube;

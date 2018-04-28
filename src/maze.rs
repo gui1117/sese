@@ -20,6 +20,7 @@ impl<T: Eq + Hash + Clone> Pop for HashSet<T> {
     }
 }
 
+#[derive(Clone)]
 struct Opening<D>
 where
     D: ::na::Dim + ::na::DimName + Hash,
@@ -31,6 +32,7 @@ where
     cost: isize,
 }
 
+#[derive(Clone)]
 pub struct Maze<D>
 where
     D: ::na::Dim + ::na::DimName + Hash,
@@ -40,7 +42,7 @@ where
     pub walls: HashSet<::na::VectorN<isize, D>>,
     size: ::na::VectorN<isize, D>,
     openings: Vec<Opening<D>>,
-    neighbours: Vec<::na::VectorN<isize, D>>,
+    pub neighbours: Vec<::na::VectorN<isize, D>>,
 }
 
 impl Maze<::na::U3> {
@@ -608,6 +610,38 @@ where
         v[1] = y;
         v[2] = z;
         v
+    }
+
+    /// Only direct openings
+    pub fn find_path_direct(
+        &self,
+        pos: ::na::VectorN<isize, D>,
+        goal: ::na::VectorN<isize, D>,
+    ) -> Option<Vec<::na::VectorN<isize, D>>> {
+        ::pathfinding::astar::astar(
+            &pos,
+            |cell| {
+                let mut res = vec![];
+                for opening in self.openings.iter().filter(|o| o.requires.len() == 1) {
+                    if opening
+                        .requires
+                        .iter()
+                        .all(|o| !self.walls.contains(&(o + cell.clone())))
+                    {
+                        res.push((opening.cell.clone() + cell, opening.cost));
+                    }
+                }
+                res
+            },
+            |cell| {
+                let mut min = (cell[0] - goal[0]).abs();
+                for i in 1..D::dim() {
+                    min = min.min((cell[i] - goal[i]).abs());
+                }
+                min * 10
+            },
+            |cell| *cell == goal,
+        ).map(|p| p.0)
     }
 
     pub fn find_path(

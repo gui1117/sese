@@ -49,36 +49,10 @@ impl LevelBuilder {
         }
         world.add_resource(::resource::Tiles(tiles));
 
-        // Build columns
-        let mut tubes = vec![];
-        for _ in 0..self.columns {
-            let translation = ::na::Vector3::from_iterator(
-                maze.size()
-                    .iter()
-                    .map(|s| Range::new(0.0, (*s as f32) * self.unit).ind_sample(&mut rng)),
-            );
-
-            let theta = Range::new(0.0, PI * 2.0).ind_sample(&mut rng);
-            let phi = Range::new(-FRAC_PI_2, FRAC_PI_2).ind_sample(&mut rng);
-            let mu = Range::new(0.0, PI * 2.0).ind_sample(&mut rng);
-
-            let rotation = ::na::UnitQuaternion::from_axis_angle(
-                &::na::Unit::new_normalize(::na::Vector3::new(theta.cos(), theta.sin(), phi.sin())),
-                mu,
-            );
-
-            let position =
-                ::na::Isometry3::from_parts(::na::Translation::from_vector(translation), rotation);
-
-            let maze_size = maze.size().iter().cloned().max().unwrap();
-            let size = (maze_size as f32 * 2_f32.sqrt()).ceil() as isize;
-            tubes.extend(::tube::build_column(position, size));
-
-            ::entity::create_column(position, size as f32 * self.unit, world);
-        }
+        // Build tubes
+        let mut tubes = ::tube::build_tubes(0, &maze);
         for tube in &mut tubes {
             tube.position.translation.vector *= self.unit;
-            tube.size *= self.unit;
         }
         world.add_resource(::resource::Tubes(tubes));
 
