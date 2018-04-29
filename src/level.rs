@@ -50,9 +50,10 @@ impl LevelBuilder {
         world.add_resource(::resource::Tiles(tiles));
 
         // Build tubes
-        let mut tubes = ::tube::build_tubes(0, &maze);
+        let mut tubes = ::tube::build_tubes(self.columns, &maze);
         for tube in &mut tubes {
             tube.position.translation.vector *= self.unit;
+            ::entity::create_tube(tube, world);
         }
         world.add_resource(::resource::Tubes(tubes));
 

@@ -21,6 +21,7 @@ use vulkano::format::{ClearValue, Format};
 use vulkano;
 use alga::general::SubsetOf;
 use rand::{thread_rng, Rng};
+use rand::distributions::{Range, IndependentSample};
 use std::sync::Arc;
 use std::time::Duration;
 use specs::{Join, World};
@@ -46,6 +47,7 @@ impl Vertex {
     pub fn from_obj(obj: String) -> Vec<Vertex> {
         // TODO: tex coords
         let ref obj = ::wavefront_obj::obj::parse(obj).unwrap().objects[0];
+        let range = Range::new(0f32, 1f32);
         obj.geometry.iter()
             .flat_map(|geometry| {
                 geometry.shapes.iter()
@@ -57,7 +59,7 @@ impl Vertex {
                     let v = obj.vertices[vertex_index];
                     Vertex {
                         position: [v.x as f32, v.y as f32, v.z as f32],
-                        tex_coords: [0.0, 0.0],
+                        tex_coords: [range.ind_sample(&mut thread_rng()), range.ind_sample(&mut thread_rng())],
                     }
                 })
             })
@@ -596,7 +598,7 @@ impl Graphics {
             .begin_render_pass(
                 self.framebuffers[image_num].clone(),
                 false,
-                vec![[0.0, 0.0, 1.0, 1.0].into(), 1.0.into()],
+                vec![[1.0, 1.0, 1.0, 1.0].into(), 1.0.into()],
             )
             .unwrap();
 

@@ -1,13 +1,16 @@
-# POUR LES BARRES
-
-on prend deux blocs par mur et ensuite on les relie pour que ça fasse un tour
-
 # gameplay
 
 * des lanceurs de roquette
 * des mines que si on va trop près on s'explose dessus
 * on peut tirer sur les mines et roquette ? permet d'aider les moins forts, juste les roquette peut être
 * des boules a prendre et des boules qui s'échappe quand on s'approche et des boules qui font des tours
+* des boules qui font des rondes
+
+# graphisme
+
+les mines et les rockette et tout ce qui bouge sont des boules avec des halo qui reste derrière pour montrer le mouvement
+
+sauf le personnage car il vaut mieux montrer l'horizontalité
 
 # Todo
 

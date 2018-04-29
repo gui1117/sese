@@ -5,6 +5,8 @@ use std::collections::HashSet;
 use itertools::Itertools;
 use std::f32::consts::{FRAC_PI_2, PI};
 
+pub const RADIUS: f32 = 0.05;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, EnumIterator)]
 pub enum Shape {
     /// Line along y axis
@@ -94,6 +96,7 @@ pub fn generate_paths(extra_paths: usize, maze: &::maze::Maze<::na::U3>) -> Vec<
     paths
 }
 
+// TODO: extra tubes or tubes only ??
 pub fn build_tubes(extra_tubes: usize, maze: &::maze::Maze<::na::U3>) -> Vec<Tube> {
     let paths = generate_paths(extra_tubes, maze);
     let mut tubes = vec![];
