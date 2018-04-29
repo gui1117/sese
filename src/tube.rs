@@ -30,18 +30,20 @@ pub struct Tube {
     pub shape: Shape,
 }
 
-pub fn generate_paths(extra_paths: usize, maze: &::maze::Maze<::na::U3>) -> Vec<Vec<::na::Vector3<isize>>> {
+pub fn generate_paths(
+    extra_paths: usize,
+    maze: &::maze::Maze<::na::U3>,
+) -> Vec<Vec<::na::Vector3<isize>>> {
     let mut maze = maze.clone();
     maze.extend(2);
     maze.circle();
 
-    let mut wall_parts = maze.compute_zones(|maze, cell| {
-        maze.walls.contains(cell)
-    });
+    let mut wall_parts = maze.compute_zones(|maze, cell| maze.walls.contains(cell));
     wall_parts.retain(|part| !part.iter().any(|&cell| cell == ::na::zero()));
     thread_rng().shuffle(&mut wall_parts);
 
-    let mut wall_parts_neighbours = wall_parts.iter()
+    let mut wall_parts_neighbours = wall_parts
+        .iter()
         .map(|walls| {
             let mut neighbours = walls.iter()
                 // tuple with neighbour and origin
@@ -55,13 +57,13 @@ pub fn generate_paths(extra_paths: usize, maze: &::maze::Maze<::na::U3>) -> Vec<
 
     let parts = wall_parts_neighbours.len();
     let mut paths = vec![];
-    for i in (0..parts).cycle().take(parts+extra_paths) {
+    for i in (0..parts).cycle().take(parts + extra_paths) {
         let path = {
             let ref start_part = wall_parts_neighbours[i];
-            let ref end_part = wall_parts_neighbours[(i+1) % parts];
+            let ref end_part = wall_parts_neighbours[(i + 1) % parts];
 
             if start_part.is_empty() || end_part.is_empty() {
-                continue
+                continue;
             }
 
             let ref start = start_part[0];
@@ -72,7 +74,7 @@ pub fn generate_paths(extra_paths: usize, maze: &::maze::Maze<::na::U3>) -> Vec<
                 path.push(*end.1);
                 path
             } else {
-                continue
+                continue;
             }
         };
 
@@ -119,13 +121,19 @@ pub fn build_tubes(extra_tubes: usize, maze: &::maze::Maze<::na::U3>) -> Vec<Tub
             // Angle
             let yv = tube - start;
             let first_rotation = if yv[0].abs() == 1 {
-                ::na::UnitQuaternion::from_axis_angle(&::na::Vector3::z_axis(), - yv[0].signum() as f32 * FRAC_PI_2)
+                ::na::UnitQuaternion::from_axis_angle(
+                    &::na::Vector3::z_axis(),
+                    -yv[0].signum() as f32 * FRAC_PI_2,
+                )
             } else if yv[1] == 1 {
                 ::na::one()
             } else if yv[1] == -1 {
                 ::na::UnitQuaternion::from_axis_angle(&::na::Vector3::z_axis(), PI)
             } else if yv[2].abs() == 1 {
-                ::na::UnitQuaternion::from_axis_angle(&::na::Vector3::x_axis(), yv[2].signum() as f32 * FRAC_PI_2)
+                ::na::UnitQuaternion::from_axis_angle(
+                    &::na::Vector3::x_axis(),
+                    yv[2].signum() as f32 * FRAC_PI_2,
+                )
             } else {
                 unreachable!();
             };
@@ -133,15 +141,20 @@ pub fn build_tubes(extra_tubes: usize, maze: &::maze::Maze<::na::U3>) -> Vec<Tub
             let xv = end - tube;
             let xv_float = ::na::Vector3::from_iterator(xv.iter().map(|&c| c as f32));
             // TODO: if the inverse cost too much to compute we can cache it as there is only 5 rotation
-            let xv_float_trans = (first_rotation.inverse() * ::na::Point::from_coordinates(xv_float)).coords;
-            let xv_trans = ::na::Vector3::from_iterator(xv_float_trans.iter().map(|c| c.round() as isize));
+            let xv_float_trans =
+                (first_rotation.inverse() * ::na::Point::from_coordinates(xv_float)).coords;
+            let xv_trans =
+                ::na::Vector3::from_iterator(xv_float_trans.iter().map(|c| c.round() as isize));
 
             let second_rotation = if xv_trans[0] == 1 {
                 ::na::one()
             } else if xv_trans[0] == -1 {
                 ::na::UnitQuaternion::from_axis_angle(&::na::Vector3::y_axis(), PI)
             } else if xv_trans[2].abs() == 1 {
-                ::na::UnitQuaternion::from_axis_angle(&::na::Vector3::y_axis(), - xv_trans[2].signum() as f32 * FRAC_PI_2)
+                ::na::UnitQuaternion::from_axis_angle(
+                    &::na::Vector3::y_axis(),
+                    -xv_trans[2].signum() as f32 * FRAC_PI_2,
+                )
             } else {
                 unreachable!();
             };

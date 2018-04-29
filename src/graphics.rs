@@ -21,7 +21,7 @@ use vulkano::format::{ClearValue, Format};
 use vulkano;
 use alga::general::SubsetOf;
 use rand::{thread_rng, Rng};
-use rand::distributions::{Range, IndependentSample};
+use rand::distributions::{IndependentSample, Range};
 use std::sync::Arc;
 use std::time::Duration;
 use specs::{Join, World};
@@ -48,20 +48,26 @@ impl Vertex {
         // TODO: tex coords
         let ref obj = ::wavefront_obj::obj::parse(obj).unwrap().objects[0];
         let range = Range::new(0f32, 1f32);
-        obj.geometry.iter()
+        obj.geometry
+            .iter()
             .flat_map(|geometry| {
-                geometry.shapes.iter()
+                geometry
+                    .shapes
+                    .iter()
                     .flat_map(|shape| match shape.primitive {
                         ::wavefront_obj::obj::Primitive::Triangle(a, b, c) => vec![a, b, c],
                         _ => unimplemented!(),
                     })
-                .map(|(vertex_index, _, _)| {
-                    let v = obj.vertices[vertex_index];
-                    Vertex {
-                        position: [v.x as f32, v.y as f32, v.z as f32],
-                        tex_coords: [range.ind_sample(&mut thread_rng()), range.ind_sample(&mut thread_rng())],
-                    }
-                })
+                    .map(|(vertex_index, _, _)| {
+                        let v = obj.vertices[vertex_index];
+                        Vertex {
+                            position: [v.x as f32, v.y as f32, v.z as f32],
+                            tex_coords: [
+                                range.ind_sample(&mut thread_rng()),
+                                range.ind_sample(&mut thread_rng()),
+                            ],
+                        }
+                    })
             })
             .collect()
     }
@@ -431,10 +437,7 @@ impl Graphics {
 
             _futures.1.push(future);
 
-            tube_assets.insert(
-                shape.clone(),
-                (texture_descriptor_set, vertex_buffer),
-            );
+            tube_assets.insert(shape.clone(), (texture_descriptor_set, vertex_buffer));
         }
 
         let unlocal_texture_descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 2)
@@ -691,8 +694,7 @@ impl Graphics {
             }
 
             for tube in &world.read_resource::<::resource::Tubes>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer) =
-                    self.tube_assets[&tube.shape];
+                let (ref texture_descriptor_set, ref vertex_buffer) = self.tube_assets[&tube.shape];
 
                 let position: ::na::Transform3<f32> = tube.position.to_superset();
 
