@@ -7,9 +7,8 @@ impl<'a> ::specs::System<'a> for TargetSystem {
     type SystemData = (
         ::specs::ReadStorage<'a, ::component::Player>,
         ::specs::ReadStorage<'a, ::component::PhysicBody>,
-        ::specs::ReadStorage<'a, ::component::PhysicSensor>,
-        ::specs::Fetch<'a, ::specs::LazyUpdate>,
         ::specs::Fetch<'a, ::resource::PhysicWorld>,
+        ::specs::Entities<'a>,
     );
 
     fn run(
@@ -17,9 +16,8 @@ impl<'a> ::specs::System<'a> for TargetSystem {
         (
             players,
             bodies,
-            sensors,
-            lazy_update,
             physic_world,
+            entities,
         ): Self::SystemData,
     ) {
 
@@ -55,22 +53,12 @@ impl<'a> ::specs::System<'a> for TargetSystem {
             .next()
             .is_none()
         {
-            let entities_to_kill = physic_world.collision_world().interferences_with_aabb(&shape.aabb(position), target_group.as_collision_groups())
+            for entity in physic_world.collision_world().interferences_with_aabb(&shape.aabb(position), target_group.as_collision_groups())
                 .filter(|co| ::ncollide::query::proximity(&co.position, &*co.shape, &position, &shape, 0.0)  == ::ncollide::query::Proximity::Intersecting)
                 .map(|co| ::component::physic_world_object_entity(&co.data, &physic_world))
-                .collect::<Vec<_>>();
-
-            lazy_update.execute(move |world| {
-                let mut physic_world = world.write_resource();
-                let mut entities = world.entities();
-                for entity in entities_to_kill {
-                    assert!(world.read::<::component::PhysicBody>().get(entity).is_none());
-                    world.read::<::component::PhysicSensor>()
-                        .get(entity).unwrap()
-                        .remove(&mut physic_world);
-                    entities.delete(entity).unwrap();
-                }
-            });
+            {
+                entities.delete(entity).unwrap();
+            }
         }
     }
 }

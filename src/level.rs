@@ -53,10 +53,21 @@ impl LevelBuilder {
         }
         world.add_resource(::resource::Tubes(tubes));
 
+        // for _ in 0..10 {
+        //     let pos = maze.random_free();
+        //     maze.walls.insert(pos);
+        //     ::entity::create_target(::util::to_world(&pos, self.unit), world);
+        // }
+
         for _ in 0..10 {
             let pos = maze.random_free();
             maze.walls.insert(pos);
-            ::entity::create_target(::util::to_world(&pos, self.unit), world);
+            let isometry = ::na::Isometry3::new(
+                ::util::to_world(&pos, 1.0),
+                ::na::zero(),
+            );
+
+            ::entity::create_rocket_launcher(isometry, world);
         }
 
         // Build monsters

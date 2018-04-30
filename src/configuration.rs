@@ -27,7 +27,11 @@ pub struct Configuration {
     pub flight_control_direction_force: f32,
     pub flight_control_default_power_force: f32,
 
+    pub rocket_control_lin_damping: f32,
+    pub rocket_control_force: f32,
+
     pub ball_radius: f32,
+    pub rocket_launcher_timer: f32,
 }
 
 impl Configuration {

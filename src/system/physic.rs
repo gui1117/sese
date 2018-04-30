@@ -7,6 +7,7 @@ pub struct PhysicSystem;
 
 impl<'a> ::specs::System<'a> for PhysicSystem {
     type SystemData = (
+        ::specs::ReadStorage<'a, ::component::RocketControl>,
         ::specs::ReadStorage<'a, ::component::FlightControl>,
         ::specs::WriteStorage<'a, ::component::PhysicBody>,
         ::specs::WriteStorage<'a, ::component::Contactor>,
@@ -18,6 +19,7 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
     fn run(
         &mut self,
         (
+            rocket_controls,
             flight_controls,
             mut bodies,
             mut contactors,
@@ -47,6 +49,16 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
             let lin_force = flight_control.power * flight_control.power_force
                 + flight_control.default_power_force;
             body.append_lin_force(orientation * ::na::Vector3::x() * lin_force);
+        }
+
+        for (rocket_control, body) in (&rocket_controls, &mut bodies).join() {
+            let body = body.get_mut(&mut physic_world);
+
+            let lin_vel = body.lin_vel();
+            body.set_lin_vel_internal(rocket_control.lin_damping * lin_vel);
+
+            body.clear_forces();
+            body.append_lin_force(rocket_control.direction * rocket_control.force);
         }
 
         for contactor in (&mut contactors).join() {

@@ -97,8 +97,9 @@ fn main() {
     world.register::<::component::Proximitor>();
     world.register::<::component::Contactor>();
     world.register::<::component::Target>();
-    world.register::<::component::Rocket>();
+    world.register::<::component::PlayerKiller>();
     world.register::<::component::RocketLauncher>();
+    world.register::<::component::RocketControl>();
     world.register::<::component::Mine>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
@@ -109,6 +110,9 @@ fn main() {
     let mut update_dispatcher = DispatcherBuilder::new()
         .add(::system::physic::PhysicSystem, "physic", &[])
         .add(::system::target::TargetSystem, "target", &["physic"])
+        .add(::system::player_killer::PlayerKillerSystem, "player killer", &[])
+        .add(::system::rocket_launcher::RocketLauncherSystem, "rocket launcher", &[])
+        .add(::system::rocket::RocketSystem, "rocket", &[])
         .add_barrier() // Draw barrier
         .build();
 
@@ -190,12 +194,13 @@ fn main() {
 
         // Maintain world and synchronize physic world
         world.maintain();
-        // Note: second maintain is necessary for entities deleted in lazy update executions
-        world.maintain();
         {
             let mut physic_world = world.write_resource::<::resource::PhysicWorld>();
             for body in world.write::<::component::PhysicBody>().retained() {
                 physic_world.remove_rigid_body(body.handle());
+            }
+            for sensor in world.write::<::component::PhysicBody>().retained() {
+                physic_world.remove_sensor(sensor.handle());
             }
         }
 

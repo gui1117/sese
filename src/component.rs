@@ -2,8 +2,8 @@ use retained_storage::RetainedStorage;
 use std::any::Any;
 
 pub struct RocketLauncher {
-    position: ::na::Isometry3<f32>,
-    timer: f32,
+    pub position: ::na::Isometry3<f32>,
+    pub timer: f32,
 }
 impl ::specs::Component for RocketLauncher {
     type Storage = ::specs::VecStorage<Self>;
@@ -23,6 +23,15 @@ impl ::specs::Component for Target {
     type Storage = ::specs::NullStorage<Self>;
 }
 
+pub struct RocketControl {
+    pub lin_damping: f32,
+    pub force: f32,
+    pub direction: ::na::Vector3<f32>,
+}
+impl ::specs::Component for RocketControl {
+    type Storage = ::specs::VecStorage<Self>;
+}
+
 #[derive(Default)]
 pub struct Mine;
 impl ::specs::Component for Mine {
@@ -30,8 +39,8 @@ impl ::specs::Component for Mine {
 }
 
 #[derive(Default)]
-pub struct Rocket;
-impl ::specs::Component for Rocket {
+pub struct PlayerKiller;
+impl ::specs::Component for PlayerKiller {
     type Storage = ::specs::NullStorage<Self>;
 }
 
@@ -102,10 +111,6 @@ impl PhysicBody {
     ) -> &'a mut ::nphysics::object::RigidBody<f32> {
         physic_world.mut_rigid_body(self.handle)
     }
-
-    pub fn remove(&self, physic_world: &mut ::resource::PhysicWorld) {
-        physic_world.remove_rigid_body(self.handle);
-    }
 }
 
 // Sensor handle and whereas it has been deleted
@@ -120,6 +125,10 @@ impl ::specs::Component for PhysicSensor {
 
 #[allow(unused)]
 impl PhysicSensor {
+    pub fn handle(&self) -> usize {
+        self.handle
+    }
+
     pub fn entity(body: &::nphysics::object::Sensor<f32>) -> ::specs::Entity {
         let entity = body.user_data().unwrap();
         let entity = unsafe { ::std::mem::transmute::<&Box<_>, &Box<Any>>(entity) };
@@ -156,10 +165,6 @@ impl PhysicSensor {
         physic_world: &'a mut ::resource::PhysicWorld,
     ) -> &'a mut ::nphysics::object::Sensor<f32> {
         physic_world.mut_sensor(self.handle)
-    }
-
-    pub fn remove(&self, physic_world: &mut ::resource::PhysicWorld) {
-        physic_world.remove_sensor(self.handle);
     }
 }
 
