@@ -1,6 +1,3 @@
-use std::f32::consts::{FRAC_PI_2, PI};
-use rand::distributions::{IndependentSample, Range};
-
 pub struct LevelBuilder {
     pub half_size: usize,
     pub x_shift: bool,
@@ -13,9 +10,8 @@ pub struct LevelBuilder {
 
 impl LevelBuilder {
     pub fn build(&self, world: &mut ::specs::World) {
-        let mut rng = ::rand::thread_rng();
         // Build maze
-        let maze = {
+        let mut maze = {
             let size = ::na::Vector3::new(
                 (self.half_size * 2 + 1) as isize,
                 (self.half_size * 2 + 1) as isize,
@@ -50,12 +46,18 @@ impl LevelBuilder {
         world.add_resource(::resource::Tiles(tiles));
 
         // Build tubes
-        let mut tubes = ::tube::build_tubes(self.columns, &maze);
+        let mut tubes = ::tube::build_tubes(self.columns, &mut maze);
         for tube in &mut tubes {
             tube.position.translation.vector *= self.unit;
             ::entity::create_tube(tube, world);
         }
         world.add_resource(::resource::Tubes(tubes));
+
+        for _ in 0..10 {
+            let pos = maze.random_free();
+            maze.walls.insert(pos);
+            ::entity::create_target(::util::to_world(&pos, self.unit), world);
+        }
 
         // Build monsters
         let player_distance = 3;

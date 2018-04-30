@@ -1,9 +1,21 @@
 use alga::linear::AffineTransformation;
 
+#[repr(usize)]
+pub enum Group {
+    Target,
+    Wall,
+    Player,
+    Rocket,
+}
+
 pub fn create_wall(pos: ::na::Vector3<f32>, _color: usize, world: &mut ::specs::World) {
     let shape = ::ncollide::shape::Cuboid3::new(::na::Vector3::from_element(0.5));
     let mut body = ::nphysics::object::RigidBody::new_static(shape, 0.0, 0.0);
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
+
+    let mut group = ::nphysics::object::RigidBodyCollisionGroups::new_static();
+    group.set_membership(&[Group::Wall as usize]);
+    body.set_collision_groups(group);
 
     let entity = world.create_entity().build();
 
@@ -16,9 +28,13 @@ pub fn create_wall(pos: ::na::Vector3<f32>, _color: usize, world: &mut ::specs::
 }
 
 pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
-    let shape = ::ncollide::shape::Cuboid3::new(::na::Vector3::from_element(0.1));
-    let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 10000.0, 0.0, 0.0);
+    let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
+    let mut group = ::nphysics::object::RigidBodyCollisionGroups::new_dynamic();
+    group.set_membership(&[Group::Player as usize]);
+
+    let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 1.0, 0.0, 0.0);
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
+    body.set_collision_groups(group);
 
     let entity = world
         .create_entity()
@@ -77,7 +93,11 @@ pub fn create_tube(tube: &::tube::Tube, world: &mut ::specs::World) {
         }
     };
 
-    for body in bodies {
+    for mut body in bodies {
+        let mut group = ::nphysics::object::RigidBodyCollisionGroups::new_static();
+        group.set_membership(&[Group::Wall as usize]);
+        body.set_collision_groups(group);
+
         let entity = world.create_entity().build();
 
         ::component::PhysicBody::add(
@@ -87,4 +107,71 @@ pub fn create_tube(tube: &::tube::Tube, world: &mut ::specs::World) {
             &mut world.write_resource(),
         );
     }
+}
+
+pub fn create_rocket(pos: ::na::Isometry3<f32>, world: &mut ::specs::World) {
+    let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
+    let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 1.0, 0.0, 0.0);
+    body.set_transformation(pos);
+
+    let entity = world
+        .create_entity()
+        .with(::component::Rocket)
+        .with(::component::Contactor::new())
+        .build();
+
+    ::component::PhysicBody::add(
+        entity,
+        body,
+        &mut world.write(),
+        &mut world.write_resource(),
+    );
+}
+
+// pub fn create_rocket_launcher(pos: ::na::Isometry3<f32>, world: &mut ::specs::World) {
+//     world.create_entity()
+//         .with(::component::RocketLauncher::new(pos))
+//         .build();
+// }
+
+// pub fn create_mine(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
+//     let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
+//     let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 1.0, 0.0, 0.0);
+//     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
+
+//     let entity = world
+//         .create_entity()
+//         .with(::component::Mine)
+//         .with(::component::Contactor::new())
+//         .build();
+
+//     ::component::PhysicBody::add(
+//         entity,
+//         body,
+//         &mut world.write(),
+//         &mut world.write_resource(),
+//     );
+// }
+
+pub fn create_target(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
+    let mut group = ::nphysics::object::SensorCollisionGroups::new();
+    group.set_membership(&[Group::Target as usize]);
+    group.set_whitelist(&[Group::Target as usize]);
+
+    let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
+    let mut sensor = ::nphysics::object::Sensor::new(shape, None);
+    sensor.set_relative_position(::na::Isometry3::new(pos, ::na::zero()));
+    sensor.set_collision_groups(group);
+
+    let entity = world
+        .create_entity()
+        .with(::component::Target)
+        .build();
+
+    ::component::PhysicSensor::add(
+        entity,
+        sensor,
+        &mut world.write(),
+        &mut world.write_resource(),
+    );
 }

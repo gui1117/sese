@@ -1,10 +1,8 @@
 use graphics::Vertex;
-use std::f32::consts::PI;
 
 // TODO: put this in tile.rs
 
 const THICKNESS: f32 = 0.05;
-const CYLINDER_DIV: usize = 32;
 
 const TILE: [Vertex; 36] = [
     // Bottom

@@ -1,6 +1,4 @@
-use rand::distributions::{IndependentSample, Range};
 use rand::{thread_rng, Rng};
-use alga::linear::AffineTransformation;
 use std::collections::HashSet;
 use itertools::Itertools;
 use std::f32::consts::{FRAC_PI_2, PI};
@@ -32,9 +30,8 @@ pub struct Tube {
 
 pub fn generate_paths(
     extra_paths: usize,
-    maze: &::maze::Maze<::na::U3>,
+    maze: &mut ::maze::Maze<::na::U3>,
 ) -> Vec<Vec<::na::Vector3<isize>>> {
-    let mut maze = maze.clone();
     maze.extend(2);
     maze.circle();
 
@@ -95,11 +92,13 @@ pub fn generate_paths(
         }
     }
 
+    maze.reduce(2);
+
     paths
 }
 
 // TODO: extra tubes or tubes only ??
-pub fn build_tubes(extra_tubes: usize, maze: &::maze::Maze<::na::U3>) -> Vec<Tube> {
+pub fn build_tubes(extra_tubes: usize, maze: &mut ::maze::Maze<::na::U3>) -> Vec<Tube> {
     let paths = generate_paths(extra_tubes, maze);
     let mut tubes = vec![];
     for (start, tube, end) in paths.iter().flat_map(|path| path.iter().tuple_windows()) {

@@ -1,6 +1,40 @@
 use retained_storage::RetainedStorage;
 use std::any::Any;
 
+pub struct RocketLauncher {
+    position: ::na::Isometry3<f32>,
+    timer: f32,
+}
+impl ::specs::Component for RocketLauncher {
+    type Storage = ::specs::VecStorage<Self>;
+}
+impl RocketLauncher {
+    pub fn new(position: ::na::Isometry3<f32>) -> Self {
+        RocketLauncher {
+            timer: 0.0,
+            position,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct Target;
+impl ::specs::Component for Target {
+    type Storage = ::specs::NullStorage<Self>;
+}
+
+#[derive(Default)]
+pub struct Mine;
+impl ::specs::Component for Mine {
+    type Storage = ::specs::NullStorage<Self>;
+}
+
+#[derive(Default)]
+pub struct Rocket;
+impl ::specs::Component for Rocket {
+    type Storage = ::specs::NullStorage<Self>;
+}
+
 pub struct FlightControl {
     pub x_direction: f32,
     pub y_direction: f32,
@@ -68,6 +102,10 @@ impl PhysicBody {
     ) -> &'a mut ::nphysics::object::RigidBody<f32> {
         physic_world.mut_rigid_body(self.handle)
     }
+
+    pub fn remove(&self, physic_world: &mut ::resource::PhysicWorld) {
+        physic_world.remove_rigid_body(self.handle);
+    }
 }
 
 // Sensor handle and whereas it has been deleted
@@ -118,6 +156,17 @@ impl PhysicSensor {
         physic_world: &'a mut ::resource::PhysicWorld,
     ) -> &'a mut ::nphysics::object::Sensor<f32> {
         physic_world.mut_sensor(self.handle)
+    }
+
+    pub fn remove(&self, physic_world: &mut ::resource::PhysicWorld) {
+        physic_world.remove_sensor(self.handle);
+    }
+}
+
+pub fn physic_world_object_entity(wo: &::nphysics::object::WorldObject, physic_world: &::nphysics::world::World<f32>) -> ::specs::Entity {
+    match wo {
+        &::nphysics::object::WorldObject::RigidBody(wo) => PhysicBody::entity(physic_world.rigid_body(wo)),
+        &::nphysics::object::WorldObject::Sensor(wo) => PhysicSensor::entity(physic_world.sensor(wo)),
     }
 }
 

@@ -4,7 +4,8 @@
 * des mines que si on va trop près on s'explose dessus
 * on peut tirer sur les mines et roquette ? permet d'aider les moins forts, juste les roquette peut être
 * des boules a prendre et des boules qui s'échappe quand on s'approche et des boules qui font des tours
-* des boules qui font des rondes
+* mettre le fait de tirer en option de création de map
+* pour simplifier la caméra peut être faire que la vue est dans le vaisseau ?
 
 # graphisme
 

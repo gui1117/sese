@@ -91,10 +91,15 @@ fn main() {
 
     let mut world = World::new();
     world.register::<::component::PhysicBody>();
+    world.register::<::component::PhysicSensor>();
     world.register::<::component::Player>();
     world.register::<::component::FlightControl>();
     world.register::<::component::Proximitor>();
     world.register::<::component::Contactor>();
+    world.register::<::component::Target>();
+    world.register::<::component::Rocket>();
+    world.register::<::component::RocketLauncher>();
+    world.register::<::component::Mine>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
     world.add_resource(::resource::PlayersEntities([None; 3]));
@@ -103,6 +108,7 @@ fn main() {
 
     let mut update_dispatcher = DispatcherBuilder::new()
         .add(::system::physic::PhysicSystem, "physic", &[])
+        .add(::system::target::TargetSystem, "target", &["physic"])
         .add_barrier() // Draw barrier
         .build();
 
@@ -183,6 +189,8 @@ fn main() {
         update_dispatcher.dispatch(&mut world.res);
 
         // Maintain world and synchronize physic world
+        world.maintain();
+        // Note: second maintain is necessary for entities deleted in lazy update executions
         world.maintain();
         {
             let mut physic_world = world.write_resource::<::resource::PhysicWorld>();

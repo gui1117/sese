@@ -90,6 +90,7 @@ pub struct Graphics {
     pub model_buffer_pool: CpuBufferPool<vs::ty::Model>,
     pub cuboid_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
     pub cylinder_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
+    pub ball_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
 
@@ -319,6 +320,48 @@ impl Graphics {
             queue.clone(),
         ).unwrap();
 
+        let (ball_vertex_buffer, _future) = ImmutableBuffer::from_iter(
+            {
+                let sphere = ::ncollide::procedural::sphere(1.0, 32, 32, false);
+                let indices = match sphere.indices {
+                    ::ncollide::procedural::IndexBuffer::Unified(ref indices) => indices.clone(),
+                    _ => unreachable!(),
+                };
+
+                let mut vertices = vec![];
+                for p in indices {
+                    vertices.push([
+                        sphere.coords[p.x as usize][0] * 2.0,
+                        sphere.coords[p.x as usize][1] * 2.0,
+                        sphere.coords[p.x as usize][2] * 2.0,
+                    ]);
+                    vertices.push([
+                        sphere.coords[p.y as usize][0] * 2.0,
+                        sphere.coords[p.y as usize][1] * 2.0,
+                        sphere.coords[p.y as usize][2] * 2.0,
+                    ]);
+                    vertices.push([
+                        sphere.coords[p.z as usize][0] * 2.0,
+                        sphere.coords[p.z as usize][1] * 2.0,
+                        sphere.coords[p.z as usize][2] * 2.0,
+                    ]);
+                }
+
+                vertices
+            }.iter()
+                .cloned()
+                .map(|v| {
+                    let range = Range::new(0f32, 1f32);
+                    let tex_coords = [
+                        range.ind_sample(&mut thread_rng()),
+                        range.ind_sample(&mut thread_rng()),
+                    ];
+                    Vertex::new(v, tex_coords)
+                }),
+            BufferUsage::vertex_buffer(),
+            queue.clone(),
+        ).unwrap();
+
         let (framebuffers, ()) =
             Graphics::framebuffers_and_descriptors(&device, &images, &render_pass);
 
@@ -469,6 +512,7 @@ impl Graphics {
             model_buffer_pool,
             cuboid_vertex_buffer,
             cylinder_vertex_buffer,
+            ball_vertex_buffer,
 
             unlocal_texture_descriptor_set,
             tile_assets,
@@ -609,6 +653,7 @@ impl Graphics {
         {
             let physic_world = world.read_resource::<::resource::PhysicWorld>();
             let physic_bodies = world.read::<::component::PhysicBody>();
+            let physic_sensors = world.read::<::component::PhysicSensor>();
             let players = world.read::<::component::Player>();
 
             let player_pos = (&players, &physic_bodies)
@@ -728,11 +773,55 @@ impl Graphics {
 
             // Draw physic world
             if true {
-                for body in physic_bodies.join() {
+                let bodies = physic_bodies.join().map(|body| {
                     let body = body.get(&physic_world);
                     let shape = body.shape();
-                    if let Some(_shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
-                        // TODO
+                    (body.position(), shape)
+                });
+                // TODO: this is for debug only as sensor relative position are not always absolute
+                let sensors = physic_sensors.join().map(|sensor| {
+                    let sensor = sensor.get(&physic_world);
+                    let shape = sensor.shape();
+                    (sensor.relative_position(), shape)
+                });
+
+                for (position, shape) in bodies.chain(sensors) {
+                    if let Some(shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
+                        let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                            shape.radius(),
+                            shape.radius(),
+                            shape.radius(),
+                            1.0,
+                        ));
+
+                        let position: ::na::Transform3<f32> = position.to_superset();
+
+                        let model = self.model_buffer_pool
+                            .next(vs::ty::Model {
+                                model: (position.unwrap() * primitive_trans).into(),
+                            })
+                            .unwrap();
+
+                        let model_descriptor_set = self.model_descriptor_sets_pool
+                            .next()
+                            .add_buffer(model)
+                            .unwrap()
+                            .build()
+                            .unwrap();
+
+                        command_buffer_builder = command_buffer_builder
+                            .draw(
+                                self.pipeline.clone(),
+                                screen_dynamic_state.clone(),
+                                vec![self.ball_vertex_buffer.clone()],
+                                (
+                                    camera_descriptor_set.clone(),
+                                    model_descriptor_set,
+                                    self.unlocal_texture_descriptor_set.clone(),
+                                ),
+                                [1.0f32, 1.0, 1.0],
+                            )
+                            .unwrap();
                     } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>()
                     {
                         let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
@@ -742,7 +831,7 @@ impl Graphics {
                             1.0,
                         ));
 
-                        let position: ::na::Transform3<f32> = body.position().to_superset();
+                        let position: ::na::Transform3<f32> = position.to_superset();
 
                         let model = self.model_buffer_pool
                             .next(vs::ty::Model {
@@ -781,7 +870,7 @@ impl Graphics {
                             1.0,
                         ));
 
-                        let position: ::na::Transform3<f32> = body.position().to_superset();
+                        let position: ::na::Transform3<f32> = position.to_superset();
 
                         let model = self.model_buffer_pool
                             .next(vs::ty::Model {
