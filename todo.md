@@ -13,6 +13,14 @@ les mines et les rockette et tout ce qui bouge sont des boules avec des halo qui
 
 sauf le personnage car il vaut mieux montrer l'horizontalité
 
+# graphics
+
+si pas tout les joueurs on une manette associé alors bloquer le jeux et faire des updateTime=0
+si un joueur et présent mais pas d'entité correspondante ou celle ci est morte alors on en crée une au bout de X secondes
+
+pour le dessin:
+* overlay si pas de gamepad associé alors marquer en attente de joueur
+
 # Todo
 
 * corriger bug une face n'apparait pas
@@ -102,6 +110,7 @@ https://pdtextures.blogspot.fr/
 # Camera
 
 faire que si obstacle alors avancer d'une certain manière la camera vers l'objet
+et faire quelque chose de lisse, et pas directement position du player
 
 # Idea
 

@@ -23,18 +23,29 @@ impl ::specs::Component for Target {
     type Storage = ::specs::NullStorage<Self>;
 }
 
-pub struct RocketControl {
-    pub lin_damping: f32,
-    pub force: f32,
-    pub direction: ::na::Vector3<f32>,
+pub struct ClosestPlayer {
+    pub vector: Option<::na::Vector3<f32>>,
 }
-impl ::specs::Component for RocketControl {
+impl ::specs::Component for ClosestPlayer {
     type Storage = ::specs::VecStorage<Self>;
+}
+impl ClosestPlayer {
+    pub fn new() -> Self {
+        ClosestPlayer {
+            vector: None,
+        }
+    }
 }
 
 #[derive(Default)]
-pub struct Mine;
-impl ::specs::Component for Mine {
+pub struct MineControl;
+impl ::specs::Component for MineControl {
+    type Storage = ::specs::NullStorage<Self>;
+}
+
+#[derive(Default)]
+pub struct RocketControl;
+impl ::specs::Component for RocketControl {
     type Storage = ::specs::NullStorage<Self>;
 }
 

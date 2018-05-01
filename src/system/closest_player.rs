@@ -1,12 +1,12 @@
 use specs::Join;
 
-pub struct RocketSystem;
+pub struct ClosestPlayerSystem;
 
-impl<'a> ::specs::System<'a> for RocketSystem {
+impl<'a> ::specs::System<'a> for ClosestPlayerSystem {
     type SystemData = (
         ::specs::ReadStorage<'a, ::component::Player>,
         ::specs::ReadStorage<'a, ::component::PhysicBody>,
-        ::specs::WriteStorage<'a, ::component::RocketControl>,
+        ::specs::WriteStorage<'a, ::component::ClosestPlayer>,
         ::specs::Fetch<'a, ::resource::PhysicWorld>,
     );
 
@@ -15,19 +15,17 @@ impl<'a> ::specs::System<'a> for RocketSystem {
         (
             players,
             bodies,
-            mut rockets,
+            mut closest_players,
             physic_world,
         ): Self::SystemData,
     ) {
-        for (rocket, body) in (&mut rockets, &bodies).join() {
+        for (closest_player, body) in (&mut closest_players, &bodies).join() {
             let position = body.get(&physic_world).position().translation.vector;
-            rocket.direction = (&players, &bodies).join()
+            closest_player.vector = (&players, &bodies).join()
                 .map(|(_, player_body)| {
                     player_body.get(&physic_world).position().translation.vector - position
                 })
-                .min_by_key(|v| (v.norm()*10000.0) as usize)
-                .map(|v| v.normalize())
-                .unwrap_or(::na::zero());
+                .min_by_key(|v| (v.norm()*10000.0) as usize);
         }
     }
 }

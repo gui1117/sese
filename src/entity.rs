@@ -6,6 +6,7 @@ pub enum Group {
     Wall,
     Player,
     Rocket,
+    Mine,
 }
 
 pub fn create_wall(pos: ::na::Vector3<f32>, _color: usize, world: &mut ::specs::World) {
@@ -120,11 +121,8 @@ pub fn create_rocket(pos: ::na::Isometry3<f32>, world: &::specs::World) {
     let entity = world.entities().create();
     world.write().insert(entity, ::component::PlayerKiller);
     world.write().insert(entity, ::component::Contactor::new());
-    world.write().insert(entity, ::component::RocketControl {
-        lin_damping: ::CFG.rocket_control_lin_damping,
-        force: ::CFG.rocket_control_force,
-        direction: ::na::zero(),
-    });
+    world.write().insert(entity, ::component::RocketControl);
+    world.write().insert(entity, ::component::ClosestPlayer::new());
 
     ::component::PhysicBody::add(
         entity,
@@ -140,24 +138,27 @@ pub fn create_rocket_launcher(pos: ::na::Isometry3<f32>, world: &mut ::specs::Wo
         .build();
 }
 
-// pub fn create_mine(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
-//     let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
-//     let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 1.0, 0.0, 0.0);
-//     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
+pub fn create_mine(pos: ::na::Vector3<f32>, world: &::specs::World) {
+    let mut group = ::nphysics::object::RigidBodyCollisionGroups::new_dynamic();
+    group.set_membership(&[Group::Mine as usize]);
+    let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
+    let mut body = ::nphysics::object::RigidBody::new_dynamic(shape, 1.0, 0.0, 0.0);
+    body.set_collision_groups(group);
+    body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
 
-//     let entity = world
-//         .create_entity()
-//         .with(::component::Mine)
-//         .with(::component::Contactor::new())
-//         .build();
+    let entity = world.entities().create();
+    world.write().insert(entity, ::component::PlayerKiller);
+    world.write().insert(entity, ::component::Contactor::new());
+    world.write().insert(entity, ::component::MineControl);
+    world.write().insert(entity, ::component::ClosestPlayer::new());
 
-//     ::component::PhysicBody::add(
-//         entity,
-//         body,
-//         &mut world.write(),
-//         &mut world.write_resource(),
-//     );
-// }
+    ::component::PhysicBody::add(
+        entity,
+        body,
+        &mut world.write(),
+        &mut world.write_resource(),
+    );
+}
 
 pub fn create_target(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
     let mut group = ::nphysics::object::SensorCollisionGroups::new();

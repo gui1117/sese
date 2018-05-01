@@ -19,4 +19,7 @@ Configuration(
     ball_radius: 0.1,
 
     rocket_launcher_timer: 5.0,
+
+    mine_control_max_force: 0.1,
+    mine_control_coef_force: 0.1,
 )

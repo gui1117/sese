@@ -6,6 +6,9 @@ pub struct LevelBuilder {
     pub percent: f64,
     pub columns: usize,
     pub unit: f32,
+    pub mine: usize,
+    pub rocket_launcher: usize,
+    pub target: usize,
 }
 
 impl LevelBuilder {
@@ -53,13 +56,19 @@ impl LevelBuilder {
         }
         world.add_resource(::resource::Tubes(tubes));
 
-        // for _ in 0..10 {
-        //     let pos = maze.random_free();
-        //     maze.walls.insert(pos);
-        //     ::entity::create_target(::util::to_world(&pos, self.unit), world);
-        // }
+        for _ in 0..self.mine {
+            let pos = maze.random_free();
+            maze.walls.insert(pos);
+            ::entity::create_mine(::util::to_world(&pos, self.unit), world);
+        }
 
-        for _ in 0..10 {
+        for _ in 0..self.target{
+            let pos = maze.random_free();
+            maze.walls.insert(pos);
+            ::entity::create_target(::util::to_world(&pos, self.unit), world);
+        }
+
+        for _ in 0..self.rocket_launcher {
             let pos = maze.random_free();
             maze.walls.insert(pos);
             let isometry = ::na::Isometry3::new(

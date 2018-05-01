@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use app_dirs2::{app_root, AppDataType, AppInfo};
 use show_message::OkOrShow;
+use vulkano::pipeline::viewport::Viewport;
 
 pub type PhysicWorld = ::nphysics::world::World<f32>;
 #[derive(Deref, DerefMut)]
@@ -12,6 +13,75 @@ pub struct PlayersEntities(pub [Option<::specs::Entity>; 3]);
 
 #[derive(Deref, DerefMut)]
 pub struct UpdateTime(pub f32);
+
+#[derive(Clone, Copy)]
+pub enum Mode {
+    Mode1Player,
+    Mode2Player,
+    Mode3Player,
+}
+impl Mode {
+    pub fn number_of_player(&self) -> usize {
+        match *self {
+            Mode::Mode1Player => 1,
+            Mode::Mode2Player => 2,
+            Mode::Mode3Player => 3,
+        }
+    }
+
+    pub fn viewport_for_player(&self, player: usize, dimensions: [u32; 2]) -> Viewport {
+        let mut viewport = match *self {
+            Mode::Mode1Player => {
+                assert!(player == 0);
+                Viewport {
+                    origin: [0.0, 0.0],
+                    dimensions: [1.0, 1.0],
+                    depth_range: 0.0..1.0,
+                }
+            },
+            Mode::Mode2Player => {
+                match player {
+                    0 => Viewport {
+                        origin: [0.0, 0.0],
+                        dimensions: [0.5, 1.0],
+                        depth_range: 0.0..1.0,
+                    },
+                    1 => Viewport {
+                        origin: [0.5, 0.0],
+                        dimensions: [0.5, 1.0],
+                        depth_range: 0.0..1.0,
+                    },
+                    _ => unreachable!(),
+                }
+            },
+            Mode::Mode3Player => {
+                match player {
+                    0 => Viewport {
+                        origin: [0.0, 0.0],
+                        dimensions: [0.5, 0.5],
+                        depth_range: 0.0..1.0,
+                    },
+                    1 => Viewport {
+                        origin: [0.5, 0.0],
+                        dimensions: [0.5, 0.5],
+                        depth_range: 0.0..1.0,
+                    },
+                    2 => Viewport {
+                        origin: [0.0, 0.5],
+                        dimensions: [1.0, 0.5],
+                        depth_range: 0.0..1.0,
+                    },
+                    _ => unreachable!(),
+                }
+            },
+        };
+        viewport.origin[0] *= dimensions[0] as f32;
+        viewport.origin[1] *= dimensions[1] as f32;
+        viewport.dimensions[0] *= dimensions[0] as f32;
+        viewport.dimensions[1] *= dimensions[1] as f32;
+        viewport
+    }
+}
 
 #[derive(Deref, DerefMut)]
 pub struct Tiles(pub Vec<::tile::Tile>);

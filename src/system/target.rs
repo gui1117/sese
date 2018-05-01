@@ -32,6 +32,7 @@ impl<'a> ::specs::System<'a> for TargetSystem {
         target_group.set_whitelist(&[::entity::Group::Target as usize]);
 
         let (shape, position) = match players.join().count() {
+            0 => return,
             1 => {
                 let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
                 let position = (&players, &bodies).join().next().unwrap().1.get(&physic_world).position();

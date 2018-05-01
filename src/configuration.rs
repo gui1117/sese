@@ -32,6 +32,9 @@ pub struct Configuration {
 
     pub ball_radius: f32,
     pub rocket_launcher_timer: f32,
+
+    pub mine_control_max_force: f32,
+    pub mine_control_coef_force: f32,
 }
 
 impl Configuration {

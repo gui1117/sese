@@ -100,11 +100,13 @@ fn main() {
     world.register::<::component::PlayerKiller>();
     world.register::<::component::RocketLauncher>();
     world.register::<::component::RocketControl>();
-    world.register::<::component::Mine>();
+    world.register::<::component::MineControl>();
+    world.register::<::component::ClosestPlayer>();
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
     world.add_resource(::resource::PlayersEntities([None; 3]));
     world.add_resource(::resource::PlayersGamepads([None; 3]));
+    world.add_resource(::resource::Mode::Mode1Player);
     world.maintain();
 
     let mut update_dispatcher = DispatcherBuilder::new()
@@ -112,7 +114,7 @@ fn main() {
         .add(::system::target::TargetSystem, "target", &["physic"])
         .add(::system::player_killer::PlayerKillerSystem, "player killer", &[])
         .add(::system::rocket_launcher::RocketLauncherSystem, "rocket launcher", &[])
-        .add(::system::rocket::RocketSystem, "rocket", &[])
+        .add(::system::closest_player::ClosestPlayerSystem, "closest player", &[])
         .add_barrier() // Draw barrier
         .build();
 
@@ -131,6 +133,9 @@ fn main() {
         percent: 5.0,
         unit: 1.0,
         columns: 0,
+        rocket_launcher: 1,
+        mine: 1,
+        target: 1,
     }.build(&mut world);
 
     'main_loop: loop {

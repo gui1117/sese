@@ -93,6 +93,7 @@ pub struct Graphics {
     pub ball_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
+    pub player_position_memory: [Option<::na::Isometry3<f32>>; 3],
 
     // TODO: maybe use an array
     pub tile_assets: HashMap<::tile::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
@@ -497,6 +498,7 @@ impl Graphics {
         let future = Some(Box::new(now(device.clone())) as Box<_>);
 
         let mut graphics = Graphics {
+            player_position_memory: [None; 3],
             future,
             device,
             queue,
@@ -649,259 +651,272 @@ impl Graphics {
             )
             .unwrap();
 
+        let mut next_player_position_memory = [None; 3];
         // Draw world
-        {
+        for player in 0..world.read_resource::<::resource::Mode>().number_of_player() {
+            let player_entities = world.read_resource::<::resource::PlayersEntities>();
+            let mode = world.read_resource::<::resource::Mode>();
+            let dynamic_state = DynamicState {
+                viewports: Some(vec![
+                    mode.viewport_for_player(player, dimensions),
+                ]),
+                ..DynamicState::none()
+            };
+
             let physic_world = world.read_resource::<::resource::PhysicWorld>();
             let physic_bodies = world.read::<::component::PhysicBody>();
             let physic_sensors = world.read::<::component::PhysicSensor>();
-            let players = world.read::<::component::Player>();
 
-            let player_pos = (&players, &physic_bodies)
-                .join()
-                .next()
-                .map(|(_, body)| body.get(&physic_world).position())
-                .unwrap();
+            let player_pos = player_entities[player]
+                .and_then(|entity| physic_bodies.get(entity))
+                .map(|body| body.get(&physic_world).position().clone())
+                .or(self.player_position_memory[player]);
 
-            let view_trans: ::na::Transform3<f32> = ::na::Similarity3::look_at_rh(
-                &::na::Point3::from_coordinates(
-                    player_pos.translation.vector
-                        + player_pos.rotation * ::na::Vector3::new(-0.2, 0.0, 0.2),
-                ),
-                &::na::Point3::from_coordinates(
-                    player_pos.translation.vector
-                        + player_pos.rotation * ::na::Vector3::new(0.0, 0.0, 0.2),
-                ),
-                &(player_pos.rotation * ::na::Vector3::z()),
-                1.0,
-            ).to_superset();
+            if let Some(player_pos) = player_pos {
+                next_player_position_memory[player] = Some(player_pos);
+                let view_trans: ::na::Transform3<f32> = ::na::Similarity3::look_at_rh(
+                    &::na::Point3::from_coordinates(
+                        player_pos.translation.vector
+                            + player_pos.rotation * ::na::Vector3::new(-0.2, 0.0, 0.2),
+                    ),
+                    &::na::Point3::from_coordinates(
+                        player_pos.translation.vector
+                            + player_pos.rotation * ::na::Vector3::new(0.0, 0.0, 0.2),
+                    ),
+                    &(player_pos.rotation * ::na::Vector3::z()),
+                    1.0,
+                ).to_superset();
 
-            let view = self.view_buffer_pool
-                .next(vs::ty::View {
-                    view: view_trans.unwrap().into(),
-                })
-                .unwrap();
-
-            let perspective = self.perspective_buffer_pool
-                .next(vs::ty::Perspective {
-                    perspective: ::na::Perspective3::new(
-                        dimensions[0] as f32 / dimensions[1] as f32,
-                        ::std::f32::consts::FRAC_PI_3,
-                        0.01,
-                        100.0,
-                    ).unwrap()
-                        .into(),
-                })
-                .unwrap();
-
-            let camera_descriptor_set = Arc::new(
-                self.camera_descriptor_sets_pool
-                    .next()
-                    .add_buffer(perspective)
-                    .unwrap()
-                    .add_buffer(view)
-                    .unwrap()
-                    .build()
-                    .unwrap(),
-            );
-
-            for tile in &world.read_resource::<::resource::Tiles>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer, color) =
-                    self.tile_assets[&tile.size];
-
-                let position: ::na::Transform3<f32> = tile.position.to_superset();
-
-                let model = self.model_buffer_pool
-                    .next(vs::ty::Model {
-                        model: position.unwrap().into(),
+                let view = self.view_buffer_pool
+                    .next(vs::ty::View {
+                        view: view_trans.unwrap().into(),
                     })
                     .unwrap();
 
-                let model_descriptor_set = self.model_descriptor_sets_pool
-                    .next()
-                    .add_buffer(model)
-                    .unwrap()
-                    .build()
-                    .unwrap();
-
-                command_buffer_builder = command_buffer_builder
-                    .draw(
-                        self.pipeline.clone(),
-                        screen_dynamic_state.clone(),
-                        vec![vertex_buffer.clone()],
-                        (
-                            camera_descriptor_set.clone(),
-                            model_descriptor_set,
-                            texture_descriptor_set.clone(),
-                        ),
-                        color,
-                    )
-                    .unwrap();
-            }
-
-            for tube in &world.read_resource::<::resource::Tubes>().0 {
-                let (ref texture_descriptor_set, ref vertex_buffer) = self.tube_assets[&tube.shape];
-
-                let position: ::na::Transform3<f32> = tube.position.to_superset();
-
-                let model = self.model_buffer_pool
-                    .next(vs::ty::Model {
-                        model: position.unwrap().into(),
+                let perspective = self.perspective_buffer_pool
+                    .next(vs::ty::Perspective {
+                        perspective: ::na::Perspective3::new(
+                            dimensions[0] as f32 / dimensions[1] as f32,
+                            ::std::f32::consts::FRAC_PI_3,
+                            0.01,
+                            100.0,
+                        ).unwrap()
+                            .into(),
                     })
                     .unwrap();
 
-                let model_descriptor_set = self.model_descriptor_sets_pool
-                    .next()
-                    .add_buffer(model)
-                    .unwrap()
-                    .build()
-                    .unwrap();
+                let camera_descriptor_set = Arc::new(
+                    self.camera_descriptor_sets_pool
+                        .next()
+                        .add_buffer(perspective)
+                        .unwrap()
+                        .add_buffer(view)
+                        .unwrap()
+                        .build()
+                        .unwrap(),
+                );
 
-                command_buffer_builder = command_buffer_builder
-                    .draw(
-                        self.pipeline.clone(),
-                        screen_dynamic_state.clone(),
-                        vec![vertex_buffer.clone()],
-                        (
-                            camera_descriptor_set.clone(),
-                            model_descriptor_set,
-                            texture_descriptor_set.clone(),
-                        ),
-                        [1.0f32, 1.0, 1.0],
-                    )
-                    .unwrap();
-            }
+                for tile in &world.read_resource::<::resource::Tiles>().0 {
+                    let (ref texture_descriptor_set, ref vertex_buffer, color) =
+                        self.tile_assets[&tile.size];
 
-            // Draw physic world
-            if true {
-                let bodies = physic_bodies.join().map(|body| {
-                    let body = body.get(&physic_world);
-                    let shape = body.shape();
-                    (body.position(), shape)
-                });
-                // TODO: this is for debug only as sensor relative position are not always absolute
-                let sensors = physic_sensors.join().map(|sensor| {
-                    let sensor = sensor.get(&physic_world);
-                    let shape = sensor.shape();
-                    (sensor.relative_position(), shape)
-                });
+                    let position: ::na::Transform3<f32> = tile.position.to_superset();
 
-                for (position, shape) in bodies.chain(sensors) {
-                    if let Some(shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
-                        let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                            shape.radius(),
-                            shape.radius(),
-                            shape.radius(),
-                            1.0,
-                        ));
+                    let model = self.model_buffer_pool
+                        .next(vs::ty::Model {
+                            model: position.unwrap().into(),
+                        })
+                        .unwrap();
 
-                        let position: ::na::Transform3<f32> = position.to_superset();
+                    let model_descriptor_set = self.model_descriptor_sets_pool
+                        .next()
+                        .add_buffer(model)
+                        .unwrap()
+                        .build()
+                        .unwrap();
 
-                        let model = self.model_buffer_pool
-                            .next(vs::ty::Model {
-                                model: (position.unwrap() * primitive_trans).into(),
-                            })
-                            .unwrap();
+                    command_buffer_builder = command_buffer_builder
+                        .draw(
+                            self.pipeline.clone(),
+                            dynamic_state.clone(),
+                            vec![vertex_buffer.clone()],
+                            (
+                                camera_descriptor_set.clone(),
+                                model_descriptor_set,
+                                texture_descriptor_set.clone(),
+                            ),
+                            color,
+                        )
+                        .unwrap();
+                }
 
-                        let model_descriptor_set = self.model_descriptor_sets_pool
-                            .next()
-                            .add_buffer(model)
-                            .unwrap()
-                            .build()
-                            .unwrap();
+                for tube in &world.read_resource::<::resource::Tubes>().0 {
+                    let (ref texture_descriptor_set, ref vertex_buffer) = self.tube_assets[&tube.shape];
 
-                        command_buffer_builder = command_buffer_builder
-                            .draw(
-                                self.pipeline.clone(),
-                                screen_dynamic_state.clone(),
-                                vec![self.ball_vertex_buffer.clone()],
-                                (
-                                    camera_descriptor_set.clone(),
-                                    model_descriptor_set,
-                                    self.unlocal_texture_descriptor_set.clone(),
-                                ),
-                                [1.0f32, 1.0, 1.0],
-                            )
-                            .unwrap();
-                    } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>()
-                    {
-                        let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                            shape.radius(),
-                            shape.half_height(),
-                            shape.radius(),
-                            1.0,
-                        ));
+                    let position: ::na::Transform3<f32> = tube.position.to_superset();
 
-                        let position: ::na::Transform3<f32> = position.to_superset();
+                    let model = self.model_buffer_pool
+                        .next(vs::ty::Model {
+                            model: position.unwrap().into(),
+                        })
+                        .unwrap();
 
-                        let model = self.model_buffer_pool
-                            .next(vs::ty::Model {
-                                model: (position.unwrap() * primitive_trans).into(),
-                            })
-                            .unwrap();
+                    let model_descriptor_set = self.model_descriptor_sets_pool
+                        .next()
+                        .add_buffer(model)
+                        .unwrap()
+                        .build()
+                        .unwrap();
 
-                        let model_descriptor_set = self.model_descriptor_sets_pool
-                            .next()
-                            .add_buffer(model)
-                            .unwrap()
-                            .build()
-                            .unwrap();
+                    command_buffer_builder = command_buffer_builder
+                        .draw(
+                            self.pipeline.clone(),
+                            dynamic_state.clone(),
+                            vec![vertex_buffer.clone()],
+                            (
+                                camera_descriptor_set.clone(),
+                                model_descriptor_set,
+                                texture_descriptor_set.clone(),
+                            ),
+                            [1.0f32, 1.0, 1.0],
+                        )
+                        .unwrap();
+                }
 
-                        command_buffer_builder = command_buffer_builder
-                            .draw(
-                                self.pipeline.clone(),
-                                screen_dynamic_state.clone(),
-                                vec![self.cylinder_vertex_buffer.clone()],
-                                (
-                                    camera_descriptor_set.clone(),
-                                    model_descriptor_set,
-                                    self.unlocal_texture_descriptor_set.clone(),
-                                ),
-                                [1.0f32, 1.0, 1.0],
-                            )
-                            .unwrap();
-                    } else if let Some(shape) =
-                        shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>()
-                    {
-                        let radius = shape.half_extents();
-                        let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
-                            radius[0],
-                            radius[1],
-                            radius[2],
-                            1.0,
-                        ));
+                // Draw physic world
+                if true {
+                    let bodies = physic_bodies.join().map(|body| {
+                        let body = body.get(&physic_world);
+                        let shape = body.shape();
+                        (body.position(), shape)
+                    });
+                    // TODO: this is for debug only as sensor relative position are not always absolute
+                    let sensors = physic_sensors.join().map(|sensor| {
+                        let sensor = sensor.get(&physic_world);
+                        let shape = sensor.shape();
+                        (sensor.relative_position(), shape)
+                    });
 
-                        let position: ::na::Transform3<f32> = position.to_superset();
+                    for (position, shape) in bodies.chain(sensors) {
+                        if let Some(shape) = shape.as_shape::<::ncollide::shape::Ball<f32>>() {
+                            let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                                shape.radius(),
+                                shape.radius(),
+                                shape.radius(),
+                                1.0,
+                            ));
 
-                        let model = self.model_buffer_pool
-                            .next(vs::ty::Model {
-                                model: (position.unwrap() * primitive_trans).into(),
-                            })
-                            .unwrap();
+                            let position: ::na::Transform3<f32> = position.to_superset();
 
-                        let model_descriptor_set = self.model_descriptor_sets_pool
-                            .next()
-                            .add_buffer(model)
-                            .unwrap()
-                            .build()
-                            .unwrap();
+                            let model = self.model_buffer_pool
+                                .next(vs::ty::Model {
+                                    model: (position.unwrap() * primitive_trans).into(),
+                                })
+                                .unwrap();
 
-                        command_buffer_builder = command_buffer_builder
-                            .draw(
-                                self.pipeline.clone(),
-                                screen_dynamic_state.clone(),
-                                vec![self.cuboid_vertex_buffer.clone()],
-                                (
-                                    camera_descriptor_set.clone(),
-                                    model_descriptor_set,
-                                    self.unlocal_texture_descriptor_set.clone(),
-                                ),
-                                [1.0f32, 1.0, 1.0],
-                            )
-                            .unwrap();
+                            let model_descriptor_set = self.model_descriptor_sets_pool
+                                .next()
+                                .add_buffer(model)
+                                .unwrap()
+                                .build()
+                                .unwrap();
+
+                            command_buffer_builder = command_buffer_builder
+                                .draw(
+                                    self.pipeline.clone(),
+                                    dynamic_state.clone(),
+                                    vec![self.ball_vertex_buffer.clone()],
+                                    (
+                                        camera_descriptor_set.clone(),
+                                        model_descriptor_set,
+                                        self.unlocal_texture_descriptor_set.clone(),
+                                    ),
+                                    [1.0f32, 1.0, 1.0],
+                                )
+                                .unwrap();
+                        } else if let Some(shape) = shape.as_shape::<::ncollide::shape::Cylinder<f32>>()
+                        {
+                            let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                                shape.radius(),
+                                shape.half_height(),
+                                shape.radius(),
+                                1.0,
+                            ));
+
+                            let position: ::na::Transform3<f32> = position.to_superset();
+
+                            let model = self.model_buffer_pool
+                                .next(vs::ty::Model {
+                                    model: (position.unwrap() * primitive_trans).into(),
+                                })
+                                .unwrap();
+
+                            let model_descriptor_set = self.model_descriptor_sets_pool
+                                .next()
+                                .add_buffer(model)
+                                .unwrap()
+                                .build()
+                                .unwrap();
+
+                            command_buffer_builder = command_buffer_builder
+                                .draw(
+                                    self.pipeline.clone(),
+                                    dynamic_state.clone(),
+                                    vec![self.cylinder_vertex_buffer.clone()],
+                                    (
+                                        camera_descriptor_set.clone(),
+                                        model_descriptor_set,
+                                        self.unlocal_texture_descriptor_set.clone(),
+                                    ),
+                                    [1.0f32, 1.0, 1.0],
+                                )
+                                .unwrap();
+                        } else if let Some(shape) =
+                            shape.as_shape::<::ncollide::shape::Cuboid<::na::Vector3<f32>>>()
+                        {
+                            let radius = shape.half_extents();
+                            let primitive_trans = ::na::Matrix4::from_diagonal(&::na::Vector4::new(
+                                radius[0],
+                                radius[1],
+                                radius[2],
+                                1.0,
+                            ));
+
+                            let position: ::na::Transform3<f32> = position.to_superset();
+
+                            let model = self.model_buffer_pool
+                                .next(vs::ty::Model {
+                                    model: (position.unwrap() * primitive_trans).into(),
+                                })
+                                .unwrap();
+
+                            let model_descriptor_set = self.model_descriptor_sets_pool
+                                .next()
+                                .add_buffer(model)
+                                .unwrap()
+                                .build()
+                                .unwrap();
+
+                            command_buffer_builder = command_buffer_builder
+                                .draw(
+                                    self.pipeline.clone(),
+                                    dynamic_state.clone(),
+                                    vec![self.cuboid_vertex_buffer.clone()],
+                                    (
+                                        camera_descriptor_set.clone(),
+                                        model_descriptor_set,
+                                        self.unlocal_texture_descriptor_set.clone(),
+                                    ),
+                                    [1.0f32, 1.0, 1.0],
+                                )
+                                .unwrap();
+                        }
                     }
                 }
+                // TODO: draw message if no controller
             }
         }
+        self.player_position_memory = next_player_position_memory;
 
         // TODO: Draw UI
         let next_game_state = game_state.update_draw_ui(world);

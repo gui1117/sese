@@ -9,6 +9,8 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
     type SystemData = (
         ::specs::ReadStorage<'a, ::component::RocketControl>,
         ::specs::ReadStorage<'a, ::component::FlightControl>,
+        ::specs::ReadStorage<'a, ::component::ClosestPlayer>,
+        ::specs::ReadStorage<'a, ::component::MineControl>,
         ::specs::WriteStorage<'a, ::component::PhysicBody>,
         ::specs::WriteStorage<'a, ::component::Contactor>,
         ::specs::WriteStorage<'a, ::component::Proximitor>,
@@ -21,6 +23,8 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
         (
             rocket_controls,
             flight_controls,
+            closest_players,
+            mine_controls,
             mut bodies,
             mut contactors,
             mut proximitors,
@@ -51,14 +55,30 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
             body.append_lin_force(orientation * ::na::Vector3::x() * lin_force);
         }
 
-        for (rocket_control, body) in (&rocket_controls, &mut bodies).join() {
+        for (_, body, closest_player) in (&rocket_controls, &mut bodies, &closest_players).join() {
             let body = body.get_mut(&mut physic_world);
 
             let lin_vel = body.lin_vel();
-            body.set_lin_vel_internal(rocket_control.lin_damping * lin_vel);
+            body.set_lin_vel_internal(::CFG.rocket_control_lin_damping * lin_vel);
 
             body.clear_forces();
-            body.append_lin_force(rocket_control.direction * rocket_control.force);
+            let direction = closest_player.vector.map_or(::na::zero(), |v| v.normalize());
+            body.append_lin_force(direction * ::CFG.rocket_control_force);
+        }
+
+        for (_, body, closest_player) in (&mine_controls, &mut bodies, &closest_players).join() {
+            let body = body.get_mut(&mut physic_world);
+
+            let lin_vel = body.lin_vel();
+            body.set_lin_vel_internal(::CFG.rocket_control_lin_damping * lin_vel);
+
+            body.clear_forces();
+            if let Some(v) = closest_player.vector {
+                let force = ::CFG.mine_control_max_force - v.norm()*::CFG.mine_control_coef_force;
+                if force >= 0.0 {
+                    body.append_lin_force(force*v.normalize());
+                }
+            }
         }
 
         for contactor in (&mut contactors).join() {
