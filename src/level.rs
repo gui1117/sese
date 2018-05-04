@@ -13,6 +13,8 @@ pub struct LevelBuilder {
 
 impl LevelBuilder {
     pub fn build(&self, world: &mut ::specs::World) {
+        world.delete_all();
+
         // Build maze
         let mut maze = {
             let size = ::na::Vector3::new(

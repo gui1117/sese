@@ -22,4 +22,6 @@ Configuration(
 
     mine_control_max_force: 0.1,
     mine_control_coef_force: 0.1,
+
+    text_scale: 100.0,
 )

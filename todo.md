@@ -1,3 +1,30 @@
+# ui
+
+validation de controlleur doit se faire avec le controler
+reset de tout si on change le nombre de joueur
+
+# text
+
+le cache doit être fait sur devicelocal image et pas a chaque frame
+et mise a  jour que quand ya besoin et vérifier qu'il est assez grand pour qu'il y ai pas trop besoin
+c'est a dire qu'il doit être fonction de la dimension de swapchain (on peut faire égale probablement ça marchera bien
+
+il faut que l'ensemble du texte soit établi avant la renderpass
+on update la texture si y'a eu des chgt dans le cache
+ensuite il faut appeler faire les appels de draw avec les bons vertex buffer correspondant à ces textes
+
+bof cache dans un second temps pour l'instant on s'en fout
+
+> draw_text_list avec vec(x, y, size, color, text) qui se met dans le cache et renvoie un Arc(vertex buffer) (vertex buffer qui est mis en cache de 10 par exemple pour éviter de créer un vertex buffer a chaque frame)
+
+
+> !!!utiliser un log crate pour faire des print lorsque les cache sont changé pour vérifier qu'il n'y a pas de problème
+
+
+* faire une méthode pour avoir des menu qu'on puisse mettre dans les gamestate et mettre a jour facilement avec gamepadevent et winitevent
+
+* faire system qui recrée les personnage: dedans faire assert pour que les controller et les entité soit cohérente avec le mode
+
 # gameplay
 
 * des lanceurs de roquette
@@ -5,7 +32,17 @@
 * on peut tirer sur les mines et roquette ? permet d'aider les moins forts, juste les roquette peut être
 * des boules a prendre et des boules qui s'échappe quand on s'approche et des boules qui font des tours
 * mettre le fait de tirer en option de création de map
-* pour simplifier la caméra peut être faire que la vue est dans le vaisseau ?
+* pour simplifier la caméra peut être faire que la vue est dans le vaisseau ? bof
+
+* permettre de égler son niveau de tolérance explosion
+  * tolérance murs
+  * tolérance bombe
+  * tolérance rocket ....
+
+# UI
+
+* press start or use menu to add keyboard (when not 1 player)
+  if 1 player then all gamepad are ok and directional keys keyboard is automatically added
 
 # graphisme
 
@@ -15,72 +52,42 @@ sauf le personnage car il vaut mieux montrer l'horizontalité
 
 # graphics
 
-si pas tout les joueurs on une manette associé alors bloquer le jeux et faire des updateTime=0
 si un joueur et présent mais pas d'entité correspondante ou celle ci est morte alors on en crée une au bout de X secondes
 
 pour le dessin:
 * overlay si pas de gamepad associé alors marquer en attente de joueur
 
+pour cela il faut dessiner des caractère !!! utilisé la technique de vulkan_text et puis ça ira
+
+* faire meilleur perspective quand viewport très fin en largeur
+
 # Todo
 
 * corriger bug une face n'apparait pas
-* colonnes faire texture continue
-* colonnes changer dessin c'est pas très joli
-  peut être faire ques des clonnes droites
-* génération de colonnes:
-  * faire que elles partent de surface vers une autre surface
-    sans intersection ?
-    sans intersection avec mur ?
-    sans intersection avec colonne ?
 * faire skybox ou juste couleur de fond: voie lactée peut être
 * faire vaisseau
 * faire le placement joli de la caméra (slider faust....)
 * faire monstres
 
-* faire 3 vues et toile
-
-* des barress en métal avec texture de rouille:
-  disposé de telle facon que ça relie tout les blocs
-  maze: nombre de reliure (1 mini plutot)
-
-# polish
-
-* on peut faire un grande texture avec bruit de perlin
-  et on découpe à l'interieur
-
-# finalement gameplay
-
-faire 1 ou 2 ou 3 joueurs
-avec 1 joueurs il faut passer dedans ou truc comme ça
-avec 2 joueurs il y a un fil
-avec 3 joueurs ça crée un "réseaux" (peut être cercle inscrit)
-
-boules qu'il faut attraper qui bouge: pour trouver un chemin faire astar avec chemin le plus couteux
-
-# Barres
-
-des barres random sont inséré:
-il faut qu'elles traversent le cube, et que leur taille soit > traversé
-
 # Interface
 
-
 * joystick repéré le premier joueur est le premier device repéré et des qu'un device est supprimé il est de nouveau libre
-* user story:
-  game mode:
-  * story
-    * choix du niveau
-  * arena
-    choix du niveau
-    preset: enumerateur qui se transforme en custom
-    list des monstres avec leurs nombre
-  * train alone
+* menu general:
+  * number of player
+  * add keyboard
+  * new level
 
-  > * gameplay
-  >   * vitesse, inertie ???
-  > soit le gameplay est choisi dans le menu soit il est choisi par niveau (et donc la story peut jouer la dessus)
-  > soit il est choisi par chacun
-  > soit il est pas choisi jamais..
+* level menu
+  * TODO
+
+* menu individuel
+  * tolérance ...
+  * velocity, inertia ? bof plutot pas
+  * return
+  * go to main menu
+  * on y entre avec back et sort avec start
+
+* on fait espace entrer pour créer un nouveau calvier: ca demande es differente tuche on valide et après c'est géré comme un gamepad (avec une touche pour disconnect)
 
 * faire une interface basique avec rusttype
 
@@ -149,8 +156,6 @@ peut être un écran qui montre le filet ou pas et dans quel sens ?
 * faire que y'a toujours une vitesse comme dans rayman mais on peut aussi mettre le turbo
   est-ce que le turbo devrait aussi affecter le fait de tourner (tourner plus rapide ?)
 
-* rajouter des barres comme rayman !!!!
-
 * chercher des boules dans le grappin
   d'autre a ne pas prendre
 
@@ -184,21 +189,11 @@ peut être un écran qui montre le filet ou pas et dans quel sens ?
 * mouvement:
   * inertie plus ou moins
 
+* faire des bouncers target et des bouncer killer
 
-# Murs
+* faire des untarget: des boules a ne surtout pas prendre
 
-couleurs issue de pepe
+# couleurs monstres:
 
-differentes formes:
-* bords arrondis cube+cylindre pour les bords et boules pour les angles
-  ¿motif?
-* avec des tige cubique ou cylindrique ou absente qui emglobent des surfaces
-
-# optimisation
-
-* faire que tout le monde statique soit contenu dans un vertexbuffer
-
-# types de graphisme
-
-* avec des dalles de différentes taille et dans un style marbre ou je sais avec perlin et couleurs de pepe
-* avec des rochés placé au endroits des murs et qui forme un sorte de grotte ?
+* target by net
+* killer

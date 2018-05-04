@@ -33,3 +33,4 @@ gilrs = "0.6"
 image = "0.18"
 enum-iterator-derive = "0.1"
 itertools = "0.7"
+rusttype = { version = "0.5", features = ["gpu_cache"] }

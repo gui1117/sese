@@ -35,6 +35,8 @@ pub struct Configuration {
 
     pub mine_control_max_force: f32,
     pub mine_control_coef_force: f32,
+
+    pub text_scale: f32,
 }
 
 impl Configuration {

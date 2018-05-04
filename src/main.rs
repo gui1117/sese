@@ -18,6 +18,7 @@ extern crate nphysics3d as nphysics;
 extern crate pathfinding;
 extern crate rand;
 extern crate ron;
+extern crate rusttype;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -49,10 +50,11 @@ mod graphics;
 mod retained_storage;
 mod level;
 mod entity;
+mod menu;
+mod world_action;
 
 pub use configuration::CFG;
 
-use retained_storage::Retained;
 use show_message::OkOrShow;
 use game_state::GameState;
 use vulkano_win::VkSurfaceBuild;
@@ -61,6 +63,7 @@ use std::time::Duration;
 use std::time::Instant;
 use std::thread;
 use specs::{DispatcherBuilder, World};
+use world_action::WorldAction;
 
 fn main() {
     ::std::env::set_var("WINIT_UNIX_BACKEND", "x11");
@@ -105,8 +108,10 @@ fn main() {
     world.add_resource(::resource::UpdateTime(0.0));
     world.add_resource(::resource::PhysicWorld::new());
     world.add_resource(::resource::PlayersEntities([None; 3]));
-    world.add_resource(::resource::PlayersGamepads([None; 3]));
-    world.add_resource(::resource::Mode::Mode1Player);
+    world.add_resource(::resource::PlayersControllers([None, None, None]));
+    world.add_resource(::resource::Mode::Mode2Player);
+    world.add_resource(::resource::Text::default());
+    world.add_resource(::resource::Font::new());
     world.maintain();
 
     let mut update_dispatcher = DispatcherBuilder::new()
@@ -123,7 +128,8 @@ fn main() {
     let mut last_frame_instant = Instant::now();
     let mut last_update_instant = Instant::now();
 
-    let mut game_state = Box::new(game_state::Game) as Box<GameState>;
+    let game_state = Box::new(game_state::Game::new()) as Box<GameState>;
+    let mut game_state = Box::new(game_state::BuildController::new(game_state)) as Box<GameState>;
 
     ::level::LevelBuilder {
         half_size: 9,
@@ -195,19 +201,13 @@ fn main() {
             .saturating_add(delta_time.subsec_nanos() as u64)
             as f32 / 1_000_000_000.0;
 
+        if game_state.paused(&world) {
+            world.write_resource::<::resource::UpdateTime>().0 = 0.0
+        }
+
         update_dispatcher.dispatch(&mut world.res);
 
-        // Maintain world and synchronize physic world
-        world.maintain();
-        {
-            let mut physic_world = world.write_resource::<::resource::PhysicWorld>();
-            for body in world.write::<::component::PhysicBody>().retained() {
-                physic_world.remove_rigid_body(body.handle());
-            }
-            for sensor in world.write::<::component::PhysicBody>().retained() {
-                physic_world.remove_sensor(sensor.handle());
-            }
-        }
+        world.safe_maintain();
 
         // Draw
         game_state = graphics.draw(&mut world, &window, game_state);

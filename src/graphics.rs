@@ -4,7 +4,7 @@ use vulkano::sampler::Sampler;
 use vulkano::image::{Dimensions, ImageUsage, ImmutableImage};
 use vulkano::image::attachment::AttachmentImage;
 use vulkano::image::swapchain::SwapchainImage;
-use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer};
+use vulkano::buffer::{BufferUsage, CpuBufferPool, ImmutableBuffer, CpuAccessibleBuffer};
 use vulkano::framebuffer::{Framebuffer, FramebufferAbstract, LayoutAttachmentDescription,
                            LayoutPassDependencyDescription, LayoutPassDescription, LoadOp,
                            RenderPass, RenderPassDesc, RenderPassDescClearValues, StoreOp};
@@ -28,6 +28,19 @@ use specs::{Join, World};
 use show_message::{OkOrShow, SomeOrShow};
 use std::f32::consts::PI;
 use std::collections::HashMap;
+
+// FIXME: for performance: cache those buffers with a hash of the text corresponding
+pub struct TextBuffers {
+    players: [Option<Arc<CpuAccessibleBuffer<[TextVertex]>>>; 3],
+    global: Option<Arc<CpuAccessibleBuffer<[TextVertex]>>>,
+}
+
+#[derive(Debug, Clone)]
+struct TextVertex {
+    position:     [f32; 2],
+    tex_position: [f32; 2],
+}
+impl_vertex!(TextVertex, position, tex_position);
 
 #[derive(Debug, Clone)]
 pub struct Vertex {
@@ -79,14 +92,15 @@ pub struct Graphics {
     pub swapchain: Arc<Swapchain<::winit::Window>>,
     pub render_pass: Arc<RenderPass<CustomRenderPassDesc>>,
     pub pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
+    pub text_pipeline: Arc<GraphicsPipelineAbstract + Sync + Send>,
     pub framebuffers: Vec<Arc<FramebufferAbstract + Sync + Send>>,
 
     pub camera_descriptor_sets_pool:
         FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
-    pub view_buffer_pool: CpuBufferPool<vs::ty::View>,
-    pub perspective_buffer_pool: CpuBufferPool<vs::ty::Perspective>,
     pub model_descriptor_sets_pool:
         FixedSizeDescriptorSetsPool<Arc<GraphicsPipelineAbstract + Sync + Send>>,
+    pub view_buffer_pool: CpuBufferPool<vs::ty::View>,
+    pub perspective_buffer_pool: CpuBufferPool<vs::ty::Perspective>,
     pub model_buffer_pool: CpuBufferPool<vs::ty::Model>,
     pub cuboid_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
     pub cylinder_vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
@@ -94,16 +108,51 @@ pub struct Graphics {
 
     pub unlocal_texture_descriptor_set: Arc<DescriptorSet + Send + Sync + 'static>,
     pub player_position_memory: [Option<::na::Isometry3<f32>>; 3],
+    pub need_update_glyph_cache: bool,
 
     // TODO: maybe use an array
     pub tile_assets: HashMap<::tile::TileSize, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>, [f32; 3])>,
     pub tube_assets: HashMap<::tube::Shape, (Arc<DescriptorSet + Send + Sync + 'static>, Arc<ImmutableBuffer<[Vertex]>>)>,
+
+    cache: ::rusttype::gpu_cache::Cache<'static>,
+    cache_pixel_buffer: Vec<u8>,
+    cache_image_set: Arc<DescriptorSet + Send + Sync + 'static>,
 
     future: Option<Box<GpuFuture>>,
 }
 
 // TODO: return result failure ?
 impl Graphics {
+    pub fn caches(
+        device: &Arc<Device>,
+        queue: &Arc<Queue>,
+        text_pipeline: &Arc<GraphicsPipelineAbstract + Sync + Send>,
+        dimensions: [u32; 2],
+    ) -> (
+        ::rusttype::gpu_cache::Cache<'static>,
+        Vec<u8>,
+        Arc<DescriptorSet + Send + Sync + 'static>,
+    ) {
+        let cache = ::rusttype::gpu_cache::Cache::new(dimensions[0], dimensions[1], 0.1, 0.1);
+        let cache_pixel_buffer = vec!(0; (dimensions[0] * dimensions[1]) as usize);
+        let (cache_image, _) = ImmutableImage::from_iter(
+            cache_pixel_buffer.iter().cloned(),
+            Dimensions::Dim2d { width: dimensions[0], height: dimensions[1] },
+            ::vulkano::format::R8Unorm,
+            queue.clone(),
+        ).unwrap();
+
+        let cache_image_set = PersistentDescriptorSet::start(text_pipeline.clone(), 0)
+            .add_sampled_image(cache_image.clone(), Sampler::simple_repeat_linear(device.clone()))
+            .unwrap()
+            .build()
+            .unwrap();
+
+        let cache_image_set = Arc::new(cache_image_set) as Arc<_>;
+
+        (cache, cache_pixel_buffer, cache_image_set)
+    }
+
     pub fn framebuffers_and_descriptors(
         device: &Arc<Device>,
         images: &Vec<Arc<SwapchainImage<::winit::Window>>>,
@@ -215,6 +264,8 @@ impl Graphics {
 
         let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
         let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
+        let text_vs = text_vs::Shader::load(device.clone()).expect("failed to create shader module");
+        let text_fs = text_fs::Shader::load(device.clone()).expect("failed to create shader module");
 
         let pipeline = Arc::new(
             vulkano::pipeline::GraphicsPipeline::start()
@@ -225,6 +276,19 @@ impl Graphics {
                 .viewports_dynamic_scissors_irrelevant(1)
                 .fragment_shader(fs.main_entry_point(), ())
                 .depth_stencil_simple_depth()
+                .blend_alpha_blending()
+                .render_pass(vulkano::framebuffer::Subpass::from(render_pass.clone(), 0).unwrap())
+                .build(device.clone())
+                .unwrap(),
+        ) as Arc<GraphicsPipelineAbstract + Send + Sync>;
+
+        let text_pipeline = Arc::new(
+            vulkano::pipeline::GraphicsPipeline::start()
+                .vertex_input_single_buffer::<TextVertex>()
+                .vertex_shader(text_vs.main_entry_point(), ())
+                .triangle_list()
+                .viewports_dynamic_scissors_irrelevant(1)
+                .fragment_shader(text_fs.main_entry_point(), ())
                 .blend_alpha_blending()
                 .render_pass(vulkano::framebuffer::Subpass::from(render_pass.clone(), 0).unwrap())
                 .build(device.clone())
@@ -497,7 +561,19 @@ impl Graphics {
 
         let future = Some(Box::new(now(device.clone())) as Box<_>);
 
+        let (cache, cache_pixel_buffer, cache_image_set) = Graphics::caches(
+            &device,
+            &queue,
+            &text_pipeline,
+            swapchain.dimensions(),
+        );
+
         let mut graphics = Graphics {
+            cache,
+            cache_pixel_buffer,
+            cache_image_set,
+
+            need_update_glyph_cache: false,
             player_position_memory: [None; 3],
             future,
             device,
@@ -506,6 +582,7 @@ impl Graphics {
             render_pass,
             framebuffers,
             pipeline,
+            text_pipeline,
 
             camera_descriptor_sets_pool,
             view_buffer_pool,
@@ -565,6 +642,16 @@ impl Graphics {
         let (framebuffers, ()) =
             Graphics::framebuffers_and_descriptors(&self.device, &images, &self.render_pass);
         self.framebuffers = framebuffers;
+
+        let (cache, cache_pixel_buffer, cache_image_set) = Graphics::caches(
+            &self.device,
+            &self.queue,
+            &self.text_pipeline,
+            self.swapchain.dimensions(),
+        );
+        self.cache = cache;
+        self.cache_pixel_buffer = cache_pixel_buffer;
+        self.cache_image_set = cache_image_set;
     }
 
     pub fn draw(
@@ -592,12 +679,13 @@ impl Graphics {
 
         let (image_num, acquire_future) = next_image.unwrap();
 
-        let (command_buffer, game_state) = self.build_command_buffer(image_num, world, game_state);
+        let (command_buffer, game_state, build_command_future) = self.build_command_buffer(image_num, world, game_state);
 
         let future = self.future
             .take()
             .unwrap()
             .join(acquire_future)
+            .join(build_command_future)
             .then_execute(self.queue.clone(), command_buffer)
             .unwrap()
             .then_swapchain_present(self.queue.clone(), self.swapchain.clone(), image_num)
@@ -618,6 +706,118 @@ impl Graphics {
         game_state
     }
 
+    fn build_text_buffers(&mut self, text: &mut ::resource::Text, mode: ::resource::Mode, dimensions: [u32; 2]) -> TextBuffers {
+        text.players.iter()
+            .flat_map(|v| v)
+            .chain(text.global.iter())
+            .for_each(|glyph| self.cache.queue_glyph(0, glyph.clone()));
+
+        let (cache_width, _) = self.cache.dimensions();
+
+        {
+            let cache_pixel_buffer = &mut self.cache_pixel_buffer;
+            let cache = &mut self.cache;
+            let need_update_glyph_cache = &mut self.need_update_glyph_cache;
+
+            cache.cache_queued(
+                |rect, src_data| {
+                    *need_update_glyph_cache = true;
+
+                    let width = (rect.max.x - rect.min.x) as usize;
+                    let height = (rect.max.y - rect.min.y) as usize;
+                    let mut dst_index = (rect.min.y * cache_width + rect.min.x) as usize;
+                    let mut src_index = 0;
+
+                    for _ in 0..height {
+                        let dst_slice = &mut cache_pixel_buffer[dst_index..dst_index+width];
+                        let src_slice = &src_data[src_index..src_index+width];
+                        dst_slice.copy_from_slice(src_slice);
+
+                        dst_index += cache_width as usize;
+                        src_index += width;
+                    }
+                }
+            ).unwrap();
+        }
+
+        let build_buffer = |glyphs: &Vec<_>, dimensions: [u32; 2]| {
+            let vertices = glyphs.iter().flat_map(|g| {
+                if let Ok(Some((uv_rect, screen_rect))) = self.cache.rect_for(0, g) {
+                    let gl_rect = ::rusttype::Rect {
+                        min: ::rusttype::point(
+                            screen_rect.min.x as f32 / dimensions[0] as f32,
+                            screen_rect.min.y as f32 / dimensions[1] as f32,
+                        ),
+                        max: ::rusttype::point(
+                            screen_rect.max.x as f32 / dimensions[0] as f32,
+                            screen_rect.max.y as f32 / dimensions[1] as f32,
+                        ),
+                    };
+                    vec!(
+                        TextVertex {
+                            position:     [gl_rect.min.x, gl_rect.max.y],
+                            tex_position: [uv_rect.min.x, uv_rect.max.y],
+                        },
+                        TextVertex {
+                            position:     [gl_rect.min.x, gl_rect.min.y],
+                            tex_position: [uv_rect.min.x, uv_rect.min.y],
+                        },
+                        TextVertex {
+                            position:     [gl_rect.max.x, gl_rect.min.y],
+                            tex_position: [uv_rect.max.x, uv_rect.min.y],
+                        },
+                        TextVertex {
+                            position:     [gl_rect.max.x, gl_rect.min.y],
+                            tex_position: [uv_rect.max.x, uv_rect.min.y],
+                        },
+                        TextVertex {
+                            position:     [gl_rect.max.x, gl_rect.max.y],
+                            tex_position: [uv_rect.max.x, uv_rect.max.y],
+                        },
+                        TextVertex {
+                            position:     [gl_rect.min.x, gl_rect.max.y],
+                            tex_position: [uv_rect.min.x, uv_rect.max.y],
+                        },
+                    ).into_iter()
+                }
+                else {
+                    vec!().into_iter()
+                }
+            }).collect::<Vec<_>>();
+
+            CpuAccessibleBuffer::from_iter(self.device.clone(), BufferUsage::vertex_buffer(), vertices.into_iter()).unwrap()
+        };
+
+        let global = if text.global.len() != 0 {
+            Some(build_buffer(&text.global, dimensions))
+        } else {
+            None
+        };
+
+        let mut players = [None, None, None];
+        for (player, text_player) in text.players.iter().enumerate() {
+            if text_player.len() != 0 {
+                let viewport = mode.viewport_for_player(player, dimensions);
+                let player_dimensions = [
+                    viewport.dimensions[0] as u32,
+                    viewport.dimensions[1] as u32,
+                ];
+                players[player] = Some(build_buffer(&text_player, player_dimensions));
+            }
+        }
+
+        // Clean text
+        text.global.clear();
+        for text in &mut text.players {
+            text.clear();
+        }
+
+        TextBuffers {
+            players,
+            global,
+        }
+    }
+
     fn build_command_buffer(
         &mut self,
         image_num: usize,
@@ -626,6 +826,7 @@ impl Graphics {
     ) -> (
         AutoCommandBuffer<StandardCommandPoolAlloc>,
         Box<::game_state::GameState>,
+        Box<::vulkano::sync::GpuFuture>,
     ) {
         let dimensions = self.swapchain.dimensions();
 
@@ -640,10 +841,38 @@ impl Graphics {
             ..DynamicState::none()
         };
 
+        let next_game_state = game_state.update_draw_ui(world);
+        let mut text_buffers = self.build_text_buffers(&mut world.write_resource(), *world.read_resource(), dimensions);
+
         let mut command_buffer_builder = AutoCommandBufferBuilder::primary_one_time_submit(
             self.device.clone(),
             self.queue.family(),
-        ).unwrap()
+        ).unwrap();
+
+        // TODO: log when needs update: should be at each text change not always !!
+        let future = if self.need_update_glyph_cache {
+            self.need_update_glyph_cache = false;
+            let dimensions = self.cache.dimensions();
+            let (cache_image, cache_image_future) = ImmutableImage::from_iter(
+                self.cache_pixel_buffer.iter().cloned(),
+                Dimensions::Dim2d { width: dimensions.0, height: dimensions.1 },
+                ::vulkano::format::R8Unorm,
+                self.queue.clone(),
+            ).unwrap();
+
+            let cache_image_set = PersistentDescriptorSet::start(self.text_pipeline.clone(), 0)
+                .add_sampled_image(cache_image.clone(), Sampler::simple_repeat_linear(self.device.clone()))
+                .unwrap()
+                .build()
+                .unwrap();
+
+            self.cache_image_set = Arc::new(cache_image_set) as Arc<_>;
+            Box::new(cache_image_future) as Box<_>
+        } else {
+            Box::new(::vulkano::sync::now(self.device.clone())) as Box<_>
+        };
+
+        command_buffer_builder = command_buffer_builder
             .begin_render_pass(
                 self.framebuffers[image_num].clone(),
                 false,
@@ -656,10 +885,9 @@ impl Graphics {
         for player in 0..world.read_resource::<::resource::Mode>().number_of_player() {
             let player_entities = world.read_resource::<::resource::PlayersEntities>();
             let mode = world.read_resource::<::resource::Mode>();
+            let viewport = mode.viewport_for_player(player, dimensions);
             let dynamic_state = DynamicState {
-                viewports: Some(vec![
-                    mode.viewport_for_player(player, dimensions),
-                ]),
+                viewports: Some(vec![viewport.clone()]),
                 ..DynamicState::none()
             };
 
@@ -677,7 +905,7 @@ impl Graphics {
                 let view_trans: ::na::Transform3<f32> = ::na::Similarity3::look_at_rh(
                     &::na::Point3::from_coordinates(
                         player_pos.translation.vector
-                            + player_pos.rotation * ::na::Vector3::new(-0.2, 0.0, 0.2),
+                            + player_pos.rotation * ::na::Vector3::new(-1.0, 0.0, 0.2),
                     ),
                     &::na::Point3::from_coordinates(
                         player_pos.translation.vector
@@ -696,7 +924,7 @@ impl Graphics {
                 let perspective = self.perspective_buffer_pool
                     .next(vs::ty::Perspective {
                         perspective: ::na::Perspective3::new(
-                            dimensions[0] as f32 / dimensions[1] as f32,
+                            viewport.dimensions[0] as f32 / viewport.dimensions[1] as f32,
                             ::std::f32::consts::FRAC_PI_3,
                             0.01,
                             100.0,
@@ -913,13 +1141,28 @@ impl Graphics {
                         }
                     }
                 }
-                // TODO: draw message if no controller
+            }
+            if let Some(buffer) = text_buffers.players[player].take() {
+                command_buffer_builder = command_buffer_builder.draw(
+                    self.text_pipeline.clone(),
+                    dynamic_state.clone(),
+                    vec![buffer],
+                    self.cache_image_set.clone(),
+                    (),
+                ).unwrap();
             }
         }
         self.player_position_memory = next_player_position_memory;
 
-        // TODO: Draw UI
-        let next_game_state = game_state.update_draw_ui(world);
+        if let Some(buffer) = text_buffers.global.take() {
+            command_buffer_builder = command_buffer_builder.draw(
+                self.text_pipeline.clone(),
+                screen_dynamic_state,
+                vec![buffer.clone()],
+                self.cache_image_set.clone(),
+                (),
+            ).unwrap();
+        }
 
         let command = command_buffer_builder
             .end_render_pass()
@@ -927,7 +1170,7 @@ impl Graphics {
             .build()
             .unwrap();
 
-        (command, next_game_state)
+        (command, next_game_state, future)
     }
 }
 
@@ -984,6 +1227,42 @@ void main() {
     vec3 black = vec3(0.0, 0.0, 0.0);
     float grey = texture(tex, v_tex_coords).r;
     out_color = vec4(black*grey + color.color*(1.0 - grey), 1.0);
+}
+    "]
+    struct _Dummy;
+}
+
+mod text_vs {
+    #[derive(VulkanoShader)]
+    #[ty = "vertex"]
+    #[src = "
+#version 450
+
+layout(location = 0) in vec2 position;
+layout(location = 1) in vec2 tex_position;
+layout(location = 0) out vec2 v_tex_position;
+
+void main() {
+    gl_Position = vec4(position, 0.0, 1.0);
+    v_tex_position = tex_position;
+}
+    "]
+    struct _Dummy;
+}
+
+mod text_fs {
+    #[derive(VulkanoShader)]
+    #[ty = "fragment"]
+    #[src = "
+#version 450
+
+layout(location = 0) in vec2 v_tex_position;
+layout(location = 0) out vec4 f_color;
+
+layout(set = 0, binding = 0) uniform sampler2D tex;
+
+void main() {
+    f_color = vec4(0.0, 0.0, 0.0, 1.0) * texture(tex, v_tex_position)[0];
 }
     "]
     struct _Dummy;
