@@ -263,7 +263,7 @@ impl GameState for Game {
             if players_controllers[player].is_none() {
                 let lines = vec![
                     "Press [START] to join with a gamepad".to_string(),
-                    "Press [SPACE]+[RETURN] to configure a keyboard controller".to_string(),
+                    "Press [SPACE]+[RETURN] to configure a keyboard".to_string(),
                 ];
                 text.players[player] = ::util::menu_layout(lines, None, &font);
             } else if let &Some(ref menu) = menu {
