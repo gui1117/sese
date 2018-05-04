@@ -1,8 +1,3 @@
-# ui
-
-validation de controlleur doit se faire avec le controler
-reset de tout si on change le nombre de joueur
-
 # text
 
 le cache doit être fait sur devicelocal image et pas a chaque frame
@@ -20,8 +15,7 @@ bof cache dans un second temps pour l'instant on s'en fout
 
 > !!!utiliser un log crate pour faire des print lorsque les cache sont changé pour vérifier qu'il n'y a pas de problème
 
-
-* faire une méthode pour avoir des menu qu'on puisse mettre dans les gamestate et mettre a jour facilement avec gamepadevent et winitevent
+#
 
 * faire system qui recrée les personnage: dedans faire assert pour que les controller et les entité soit cohérente avec le mode
 

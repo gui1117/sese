@@ -54,7 +54,11 @@ pub enum Controller {
 }
 
 impl Controller {
-    pub fn new_keyboard(mapping: Vec<(::winit::VirtualKeyCode, Control)>) -> Self {
+    pub fn new_keyboard(controls: &Vec<::winit::VirtualKeyCode>) -> Self {
+        let mapping = controls.iter()
+            .cloned()
+            .zip(::resource::Control::iter_variants())
+            .collect::<Vec<_>>();
         Controller::Keyboard(KeyboardController {
             mapping,
             pressed: vec![],

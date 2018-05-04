@@ -56,11 +56,7 @@ impl ValidateBuildedController {
                     .map(|(player_number, _)| player_number);
 
                 if let Some(free_player) = free_player {
-                    let controls = self.controller.iter()
-                        .cloned()
-                        .zip(::resource::Control::iter_variants())
-                        .collect::<Vec<_>>();
-                    players_controllers[free_player] = Some(::resource::Controller::new_keyboard(controls));
+                    players_controllers[free_player] = Some(::resource::Controller::new_keyboard(&self.controller));
                 }
             },
             false => (),
@@ -87,7 +83,14 @@ impl GameState for ValidateBuildedController {
     fn winit_event(mut self: Box<Self>, event: ::winit::Event, world: &mut World) -> Box<GameState> {
         let action = {
             let controllers = world.read_resource::<::resource::PlayersControllers>();
-            self.menu.winit_event(event, None, &controllers)
+            let mut possible_next_controllers = controllers.clone();
+            if let Some(c) = possible_next_controllers.iter_mut().find(|c| c.is_none()) {
+                *c = Some(::resource::Controller::new_keyboard(&self.controller));
+            } else {
+                // No available controller
+                return self.stacked_state;
+            }
+            self.menu.winit_event(event, None, &::resource::PlayersControllers(possible_next_controllers))
         };
         if let Some(action) = action {
             self.process_action(action, world)
@@ -237,7 +240,7 @@ impl Game {
 }
 
 // TODO: add tolerance
-//       add disconnect
+//       add disconnect device
 #[derive(Clone, Copy)]
 enum GameMenuAction {
     Resume,
