@@ -8,6 +8,7 @@ impl<'a> ::specs::System<'a> for TargetSystem {
         ::specs::ReadStorage<'a, ::component::Player>,
         ::specs::ReadStorage<'a, ::component::PhysicBody>,
         ::specs::Fetch<'a, ::resource::PhysicWorld>,
+        ::specs::Fetch<'a, ::resource::Mode>,
         ::specs::Entities<'a>,
     );
 
@@ -17,6 +18,7 @@ impl<'a> ::specs::System<'a> for TargetSystem {
             players,
             bodies,
             physic_world,
+            mode,
             entities,
         ): Self::SystemData,
     ) {
@@ -31,8 +33,11 @@ impl<'a> ::specs::System<'a> for TargetSystem {
         target_group.set_membership(&[::entity::Group::Target as usize]);
         target_group.set_whitelist(&[::entity::Group::Target as usize]);
 
-        let (shape, position) = match players.join().count() {
-            0 => return,
+        if mode.number_of_player() != players.join().count() {
+            return
+        }
+
+        let (shape, position) = match mode.number_of_player() {
             1 => {
                 let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
                 let position = (&players, &bodies).join().next().unwrap().1.get(&physic_world).position();

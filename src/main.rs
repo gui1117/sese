@@ -120,6 +120,7 @@ fn main() {
         .add(::system::player_killer::PlayerKillerSystem, "player killer", &[])
         .add(::system::rocket_launcher::RocketLauncherSystem, "rocket launcher", &[])
         .add(::system::closest_player::ClosestPlayerSystem, "closest player", &[])
+        .add(::system::player_creator::PlayerCreatorSystem, "player creator", &[])
         .add_barrier() // Draw barrier
         .build();
 
@@ -128,8 +129,7 @@ fn main() {
     let mut last_frame_instant = Instant::now();
     let mut last_update_instant = Instant::now();
 
-    let game_state = Box::new(game_state::Game::new()) as Box<GameState>;
-    let mut game_state = Box::new(game_state::BuildController::new(game_state)) as Box<GameState>;
+    let mut game_state = Box::new(game_state::GlobalMenu::new(&world)) as Box<GameState>;
 
     ::level::LevelBuilder {
         half_size: 9,

@@ -126,6 +126,7 @@ impl GameState for ValidateBuildedController {
     }
 }
 
+// TODO: enforce not already used key
 pub struct BuildController {
     current_input: ::resource::Control,
     controller: Vec<::winit::VirtualKeyCode>,
@@ -482,7 +483,7 @@ impl GameState for Game {
     }
 }
 
-struct GlobalMenu {
+pub struct GlobalMenu {
     menu: ::menu::Menu<GlobalMenuAction>,
 }
 

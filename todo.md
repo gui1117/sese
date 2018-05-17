@@ -1,28 +1,16 @@
-# text
-
-le cache doit être fait sur devicelocal image et pas a chaque frame
-et mise a  jour que quand ya besoin et vérifier qu'il est assez grand pour qu'il y ai pas trop besoin
-c'est a dire qu'il doit être fonction de la dimension de swapchain (on peut faire égale probablement ça marchera bien
-
-il faut que l'ensemble du texte soit établi avant la renderpass
-on update la texture si y'a eu des chgt dans le cache
-ensuite il faut appeler faire les appels de draw avec les bons vertex buffer correspondant à ces textes
-
-bof cache dans un second temps pour l'instant on s'en fout
-
-> draw_text_list avec vec(x, y, size, color, text) qui se met dans le cache et renvoie un Arc(vertex buffer) (vertex buffer qui est mis en cache de 10 par exemple pour éviter de créer un vertex buffer a chaque frame)
-
-
-> !!!utiliser un log crate pour faire des print lorsque les cache sont changé pour vérifier qu'il n'y a pas de problème
-
 #
 
 * faire system qui recrée les personnage: dedans faire assert pour que les controller et les entité soit cohérente avec le mode
 
+# finir:
+
+* camera
+* graphisme
+* variables
+* son
+
 # gameplay
 
-* des lanceurs de roquette
-* des mines que si on va trop près on s'explose dessus
 * on peut tirer sur les mines et roquette ? permet d'aider les moins forts, juste les roquette peut être
 * des boules a prendre et des boules qui s'échappe quand on s'approche et des boules qui font des tours
 * mettre le fait de tirer en option de création de map
@@ -32,11 +20,6 @@ bof cache dans un second temps pour l'instant on s'en fout
   * tolérance murs
   * tolérance bombe
   * tolérance rocket ....
-
-# UI
-
-* press start or use menu to add keyboard (when not 1 player)
-  if 1 player then all gamepad are ok and directional keys keyboard is automatically added
 
 # graphisme
 
@@ -48,20 +31,12 @@ sauf le personnage car il vaut mieux montrer l'horizontalité
 
 si un joueur et présent mais pas d'entité correspondante ou celle ci est morte alors on en crée une au bout de X secondes
 
-pour le dessin:
-* overlay si pas de gamepad associé alors marquer en attente de joueur
-
-pour cela il faut dessiner des caractère !!! utilisé la technique de vulkan_text et puis ça ira
-
-* faire meilleur perspective quand viewport très fin en largeur
-
 # Todo
 
 * corriger bug une face n'apparait pas
 * faire skybox ou juste couleur de fond: voie lactée peut être
 * faire vaisseau
 * faire le placement joli de la caméra (slider faust....)
-* faire monstres
 
 # Interface
 

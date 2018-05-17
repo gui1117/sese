@@ -15,7 +15,6 @@ impl LevelBuilder {
     pub fn build(&self, world: &mut ::specs::World) {
         world.delete_all();
 
-        // Build maze
         let mut maze = {
             let size = ::na::Vector3::new(
                 (self.half_size * 2 + 1) as isize,
@@ -50,7 +49,6 @@ impl LevelBuilder {
         }
         world.add_resource(::resource::Tiles(tiles));
 
-        // Build tubes
         let mut tubes = ::tube::build_tubes(self.columns, &mut maze);
         for tube in &mut tubes {
             tube.position.translation.vector *= self.unit;
@@ -80,14 +78,5 @@ impl LevelBuilder {
 
             ::entity::create_rocket_launcher(isometry, world);
         }
-
-        // Build monsters
-        let player_distance = 3;
-        let player_pos = ::na::Vector3::new(
-            -player_distance,
-            (self.half_size + 1) as isize,
-            (self.half_size + 1) as isize,
-        );
-        ::entity::create_player(::util::to_world(&player_pos, self.unit), world);
     }
 }

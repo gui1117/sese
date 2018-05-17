@@ -28,7 +28,7 @@ pub fn create_wall(pos: ::na::Vector3<f32>, _color: usize, world: &mut ::specs::
     );
 }
 
-pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
+pub fn create_player(pos: ::na::Vector3<f32>, world: &::specs::World) {
     let shape = ::ncollide::shape::Ball::new(::CFG.ball_radius);
     let mut group = ::nphysics::object::RigidBodyCollisionGroups::new_dynamic();
     group.set_membership(&[Group::Player as usize]);
@@ -37,20 +37,18 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
     body.set_collision_groups(group);
 
-    let entity = world
-        .create_entity()
-        .with(::component::Player)
-        .with(::component::FlightControl {
-            x_direction: 0.0,
-            y_direction: 0.0,
-            power: 0.0,
-            ang_damping: ::CFG.flight_control_ang_damping,
-            lin_damping: ::CFG.flight_control_lin_damping,
-            power_force: ::CFG.flight_control_power_force,
-            direction_force: ::CFG.flight_control_direction_force,
-            default_power_force: ::CFG.flight_control_default_power_force,
-        })
-        .build();
+    let entity = world.entities().create();
+    world.write().insert(entity, ::component::Player);
+    world.write().insert(entity, ::component::FlightControl {
+        x_direction: 0.0,
+        y_direction: 0.0,
+        power: 0.0,
+        ang_damping: ::CFG.flight_control_ang_damping,
+        lin_damping: ::CFG.flight_control_lin_damping,
+        power_force: ::CFG.flight_control_power_force,
+        direction_force: ::CFG.flight_control_direction_force,
+        default_power_force: ::CFG.flight_control_default_power_force,
+    });
 
     ::component::PhysicBody::add(
         entity,
