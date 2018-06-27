@@ -43,33 +43,3 @@ pub fn generate_texture(
         ::image::Luma { data: [data as u8] }
     })
 }
-
-/// Add itself to flip horizontal and flip vertical and rotate 90 and rotate 270 to make it as unlocal as possible
-///
-/// image must be a square
-pub fn unlocal(
-    mut image: ::image::ImageBuffer<::image::Luma<u8>, Vec<u8>>,
-    mut iteration: usize,
-) -> ::image::ImageBuffer<::image::Luma<u8>, Vec<u8>> {
-    assert_eq!(image.width(), image.height());
-
-    let mut rng = ::rand::thread_rng();
-    while iteration != 0 {
-        iteration -= 1;
-
-        let transform = match Range::new(0, 4).ind_sample(&mut rng) {
-            0 => ::image::imageops::flip_horizontal(&image),
-            1 => ::image::imageops::flip_vertical(&image),
-            2 => ::image::imageops::rotate90(&image),
-            3 => ::image::imageops::rotate270(&image),
-            _ => unreachable!(),
-        };
-
-        image = ::image::ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
-            let data = (image[(x, y)].data[0] as u32 + transform[(x, y)].data[0] as u32) / 2;
-            ::image::Luma { data: [data as u8] }
-        });
-    }
-
-    image
-}

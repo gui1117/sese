@@ -19,6 +19,7 @@ macro_rules! try_multiple_time {
 }
 
 #[inline]
+#[allow(unused)]
 pub fn to_grid(coords: &::na::Vector3<f32>, scale: f32) -> ::na::Vector3<isize> {
     ::na::Vector3::<isize>::from_iterator(coords.iter().map(|&c| (c / scale) as isize))
 }

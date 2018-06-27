@@ -211,6 +211,7 @@ impl ::specs::Component for Proximitor {
 }
 
 impl Proximitor {
+    #[allow(unused)]
     pub fn new() -> Self {
         Proximitor {
             intersections: vec![],

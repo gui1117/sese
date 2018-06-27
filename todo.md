@@ -6,7 +6,7 @@
 
 * camera
 * variables
-* graphisme
+* graphisme: also maybe redo colors rgba
 * son
 
 # gameplay
