@@ -1,4 +1,4 @@
-use rand::distributions::{IndependentSample, Range};
+use rand::distributions::{Distribution, Range};
 use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 use std::collections::HashMap;
@@ -221,7 +221,7 @@ where
         let stop = ((walls.len() as f64) * (1. - percent / 100.)) as usize;
 
         while walls.len() > stop {
-            let i = ::rand::distributions::Range::new(0, walls.len()).ind_sample(&mut rng);
+            let i = ::rand::distributions::Range::new(0, walls.len()).sample(&mut rng);
             let wall = walls.swap_remove(i);
 
             let mut groups = HashSet::new();
@@ -344,7 +344,7 @@ where
             if candidates.is_empty() {
                 return res;
             }
-            let choosen = Range::new(0, candidates.len()).ind_sample(&mut rng);
+            let choosen = Range::new(0, candidates.len()).sample(&mut rng);
             let cell = candidates.swap_remove(choosen);
             self.walls.remove(&cell);
             let opening = self.neighbours
@@ -618,7 +618,7 @@ where
         pos: ::na::VectorN<isize, D>,
         goal: ::na::VectorN<isize, D>,
     ) -> Option<Vec<::na::VectorN<isize, D>>> {
-        ::pathfinding::astar::astar(
+        ::pathfinding::directed::astar::astar(
             &pos,
             |cell| {
                 let mut res = vec![];
@@ -649,7 +649,7 @@ where
         pos: ::na::VectorN<isize, D>,
         goal: ::na::VectorN<isize, D>,
     ) -> Option<Vec<::na::VectorN<isize, D>>> {
-        ::pathfinding::astar::astar(
+        ::pathfinding::directed::astar::astar(
             &pos,
             |cell| {
                 let mut res = vec![];
@@ -682,10 +682,10 @@ where
         let mut rng = ::rand::thread_rng();
 
         let mut vec =
-            ::na::VectorN::<isize, D>::from_iterator(ranges.iter().map(|r| r.ind_sample(&mut rng)));
+            ::na::VectorN::<isize, D>::from_iterator(ranges.iter().map(|r| r.sample(&mut rng)));
         while self.walls.contains(&vec) {
             vec = ::na::VectorN::<isize, D>::from_iterator(
-                ranges.iter().map(|r| r.ind_sample(&mut rng)),
+                ranges.iter().map(|r| r.sample(&mut rng)),
             );
         }
         vec

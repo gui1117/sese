@@ -21,7 +21,7 @@ use vulkano::format::{ClearValue, Format};
 use vulkano;
 use alga::general::SubsetOf;
 use rand::{thread_rng, Rng};
-use rand::distributions::{IndependentSample, Range};
+use rand::distributions::{Distribution, Range};
 use std::sync::Arc;
 use std::time::Duration;
 use specs::{Join, World};
@@ -76,8 +76,8 @@ impl Vertex {
                         Vertex {
                             position: [v.x as f32, v.y as f32, v.z as f32],
                             tex_coords: [
-                                range.ind_sample(&mut thread_rng()),
-                                range.ind_sample(&mut thread_rng()),
+                                range.sample(&mut thread_rng()),
+                                range.sample(&mut thread_rng()),
                             ],
                         }
                     })
@@ -133,7 +133,12 @@ impl Graphics {
         Vec<u8>,
         Arc<DescriptorSet + Send + Sync + 'static>,
     ) {
-        let cache = ::rusttype::gpu_cache::Cache::new(dimensions[0], dimensions[1], 0.1, 0.1);
+        let cache = ::rusttype::gpu_cache::CacheBuilder {
+            width: dimensions[0],
+            height: dimensions[1],
+            pad_glyphs: true,
+            ..::rusttype::gpu_cache::CacheBuilder::default()
+        }.build();
         let cache_pixel_buffer = vec!(0; (dimensions[0] * dimensions[1]) as usize);
         let (cache_image, _) = ImmutableImage::from_iter(
             cache_pixel_buffer.iter().cloned(),
@@ -418,8 +423,8 @@ impl Graphics {
                 .map(|v| {
                     let range = Range::new(0f32, 1f32);
                     let tex_coords = [
-                        range.ind_sample(&mut thread_rng()),
-                        range.ind_sample(&mut thread_rng()),
+                        range.sample(&mut thread_rng()),
+                        range.sample(&mut thread_rng()),
                     ];
                     Vertex::new(v, tex_coords)
                 }),

@@ -1,5 +1,4 @@
-use rand::Rand;
-use rand::distributions::{IndependentSample, Range};
+use rand::distributions::{Distribution, Standard};
 
 pub fn generate_texture(
     width: u32,
@@ -23,7 +22,7 @@ pub fn generate_texture(
 
         let data = (0..sub_image_width*sub_image_height)
             // IDEA: other distributions for example: [0..1]^2 * 255
-            .map(|_| u8::rand(&mut rng))
+            .map(|_| Standard.sample(&mut rng))
             .collect::<Vec<_>>();
 
         let image =
