@@ -11,7 +11,8 @@ winit = "0.11"
 nalgebra = "0.13"
 ncollide = { git = "https://github.com/thiolliere/ncollide/", branch = "send_sync_master" }
 nphysics3d = { git = "https://github.com/thiolliere/nphysics/", branch = "send_sync_master" }
-specs = "0.10"
+specs = "0.12"
+hibitset = "0.5"
 alga = "0.5"
 rand = "0.4"
 lazy_static = "1"

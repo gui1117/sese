@@ -1,3 +1,4 @@
+extern crate hibitset;
 extern crate alga;
 extern crate app_dirs2;
 #[macro_use]
@@ -109,19 +110,19 @@ fn main() {
     world.add_resource(::resource::PhysicWorld::new());
     world.add_resource(::resource::PlayersEntities([None; 3]));
     world.add_resource(::resource::PlayersControllers([None, None, None]));
-    world.add_resource(::resource::Mode::Mode2Player);
+    world.add_resource(::resource::Mode::Mode1Player);
     world.add_resource(::resource::Text::default());
     world.add_resource(::resource::Font::new());
     world.maintain();
 
     let mut update_dispatcher = DispatcherBuilder::new()
-        .add(::system::physic::PhysicSystem, "physic", &[])
-        .add(::system::target::TargetSystem, "target", &["physic"])
-        .add(::system::player_killer::PlayerKillerSystem, "player killer", &[])
-        .add(::system::rocket_launcher::RocketLauncherSystem, "rocket launcher", &[])
-        .add(::system::closest_player::ClosestPlayerSystem, "closest player", &[])
-        .add(::system::player_creator::PlayerCreatorSystem, "player creator", &[])
-        .add_barrier() // Draw barrier
+        .with(::system::physic::PhysicSystem, "physic", &[])
+        .with(::system::target::TargetSystem, "target", &["physic"])
+        .with(::system::player_killer::PlayerKillerSystem, "player killer", &[])
+        .with(::system::rocket_launcher::RocketLauncherSystem, "rocket launcher", &[])
+        .with(::system::closest_player::ClosestPlayerSystem, "closest player", &[])
+        .with(::system::player_creator::PlayerCreatorSystem, "player creator", &[])
+        .with_barrier() // Draw barrier
         .build();
 
     let frame_duration = Duration::new(0, (1_000_000_000.0 / ::CFG.fps as f32) as u32);

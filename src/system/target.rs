@@ -7,8 +7,8 @@ impl<'a> ::specs::System<'a> for TargetSystem {
     type SystemData = (
         ::specs::ReadStorage<'a, ::component::Player>,
         ::specs::ReadStorage<'a, ::component::PhysicBody>,
-        ::specs::Fetch<'a, ::resource::PhysicWorld>,
-        ::specs::Fetch<'a, ::resource::Mode>,
+        ::specs::ReadExpect<'a, ::resource::PhysicWorld>,
+        ::specs::ReadExpect<'a, ::resource::Mode>,
         ::specs::Entities<'a>,
     );
 

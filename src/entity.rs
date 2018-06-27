@@ -1,4 +1,5 @@
 use alga::linear::AffineTransformation;
+use specs::Builder;
 
 #[repr(usize)]
 pub enum Group {
@@ -23,7 +24,7 @@ pub fn create_wall(pos: ::na::Vector3<f32>, _color: usize, world: &mut ::specs::
     ::component::PhysicBody::add(
         entity,
         body,
-        &mut world.write(),
+        &mut world.write_storage(),
         &mut world.write_resource(),
     );
 }
@@ -38,8 +39,8 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &::specs::World) {
     body.set_collision_groups(group);
 
     let entity = world.entities().create();
-    world.write().insert(entity, ::component::Player);
-    world.write().insert(entity, ::component::FlightControl {
+    world.write_storage().insert(entity, ::component::Player).unwrap();
+    world.write_storage().insert(entity, ::component::FlightControl {
         x_direction: 0.0,
         y_direction: 0.0,
         power: 0.0,
@@ -48,12 +49,12 @@ pub fn create_player(pos: ::na::Vector3<f32>, world: &::specs::World) {
         power_force: ::CFG.flight_control_power_force,
         direction_force: ::CFG.flight_control_direction_force,
         default_power_force: ::CFG.flight_control_default_power_force,
-    });
+    }).unwrap();
 
     ::component::PhysicBody::add(
         entity,
         body,
-        &mut world.write(),
+        &mut world.write_storage(),
         &mut world.write_resource(),
     );
 
@@ -102,7 +103,7 @@ pub fn create_tube(tube: &::tube::Tube, world: &mut ::specs::World) {
         ::component::PhysicBody::add(
             entity,
             body,
-            &mut world.write(),
+            &mut world.write_storage(),
             &mut world.write_resource(),
         );
     }
@@ -117,15 +118,15 @@ pub fn create_rocket(pos: ::na::Isometry3<f32>, world: &::specs::World) {
     body.set_transformation(pos);
 
     let entity = world.entities().create();
-    world.write().insert(entity, ::component::PlayerKiller);
-    world.write().insert(entity, ::component::Contactor::new());
-    world.write().insert(entity, ::component::RocketControl);
-    world.write().insert(entity, ::component::ClosestPlayer::new());
+    world.write_storage().insert(entity, ::component::PlayerKiller).unwrap();
+    world.write_storage().insert(entity, ::component::Contactor::new()).unwrap();
+    world.write_storage().insert(entity, ::component::RocketControl).unwrap();
+    world.write_storage().insert(entity, ::component::ClosestPlayer::new()).unwrap();
 
     ::component::PhysicBody::add(
         entity,
         body,
-        &mut world.write(),
+        &mut world.write_storage(),
         &mut world.write_resource(),
     );
 }
@@ -145,15 +146,15 @@ pub fn create_mine(pos: ::na::Vector3<f32>, world: &::specs::World) {
     body.set_transformation(::na::Isometry3::new(pos, ::na::zero()));
 
     let entity = world.entities().create();
-    world.write().insert(entity, ::component::PlayerKiller);
-    world.write().insert(entity, ::component::Contactor::new());
-    world.write().insert(entity, ::component::MineControl);
-    world.write().insert(entity, ::component::ClosestPlayer::new());
+    world.write_storage().insert(entity, ::component::PlayerKiller).unwrap();
+    world.write_storage().insert(entity, ::component::Contactor::new()).unwrap();
+    world.write_storage().insert(entity, ::component::MineControl).unwrap();
+    world.write_storage().insert(entity, ::component::ClosestPlayer::new()).unwrap();
 
     ::component::PhysicBody::add(
         entity,
         body,
-        &mut world.write(),
+        &mut world.write_storage(),
         &mut world.write_resource(),
     );
 }
@@ -176,7 +177,7 @@ pub fn create_target(pos: ::na::Vector3<f32>, world: &mut ::specs::World) {
     ::component::PhysicSensor::add(
         entity,
         sensor,
-        &mut world.write(),
+        &mut world.write_storage(),
         &mut world.write_resource(),
     );
 }

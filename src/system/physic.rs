@@ -14,8 +14,8 @@ impl<'a> ::specs::System<'a> for PhysicSystem {
         ::specs::WriteStorage<'a, ::component::PhysicBody>,
         ::specs::WriteStorage<'a, ::component::Contactor>,
         ::specs::WriteStorage<'a, ::component::Proximitor>,
-        ::specs::Fetch<'a, ::resource::UpdateTime>,
-        ::specs::FetchMut<'a, ::resource::PhysicWorld>,
+        ::specs::ReadExpect<'a, ::resource::UpdateTime>,
+        ::specs::WriteExpect<'a, ::resource::PhysicWorld>,
     );
 
     fn run(

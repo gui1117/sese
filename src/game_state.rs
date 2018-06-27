@@ -367,7 +367,7 @@ impl GameState for Game {
 
             // Update control
             let players_entities = world.read_resource::<::resource::PlayersEntities>();
-            let mut flight_controls = world.write::<::component::FlightControl>();
+            let mut flight_controls = world.write_storage::<::component::FlightControl>();
 
             let flight_control = players_entities[player].and_then(|entity| flight_controls.get_mut(entity));
             if let Some(flight_control) = flight_control {
@@ -410,7 +410,7 @@ impl GameState for Game {
 
         let mode = world.read_resource::<::resource::Mode>();
         let players_entities = world.read_resource::<::resource::PlayersEntities>();
-        let mut flight_controls = world.write::<::component::FlightControl>();
+        let mut flight_controls = world.write_storage::<::component::FlightControl>();
 
         let player = if let ::resource::Mode::Mode1Player = *mode {
             Some(0)

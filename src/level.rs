@@ -13,6 +13,7 @@ pub struct LevelBuilder {
 
 impl LevelBuilder {
     pub fn build(&self, world: &mut ::specs::World) {
+        world.maintain();
         world.delete_all();
 
         let mut maze = {

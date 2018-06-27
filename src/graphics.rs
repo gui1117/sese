@@ -892,8 +892,8 @@ impl Graphics {
             };
 
             let physic_world = world.read_resource::<::resource::PhysicWorld>();
-            let physic_bodies = world.read::<::component::PhysicBody>();
-            let physic_sensors = world.read::<::component::PhysicSensor>();
+            let physic_bodies = world.read_storage::<::component::PhysicBody>();
+            let physic_sensors = world.read_storage::<::component::PhysicSensor>();
 
             let player_pos = player_entities[player]
                 .and_then(|entity| physic_bodies.get(entity))

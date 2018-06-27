@@ -5,8 +5,8 @@ pub struct RocketLauncherSystem;
 impl<'a> ::specs::System<'a> for RocketLauncherSystem {
     type SystemData = (
         ::specs::WriteStorage<'a, ::component::RocketLauncher>,
-        ::specs::Fetch<'a, ::resource::UpdateTime>,
-        ::specs::Fetch<'a, ::specs::LazyUpdate>,
+        ::specs::ReadExpect<'a, ::resource::UpdateTime>,
+        ::specs::ReadExpect<'a, ::specs::LazyUpdate>,
     );
 
     fn run(
@@ -21,7 +21,7 @@ impl<'a> ::specs::System<'a> for RocketLauncherSystem {
             rocket_launcher.timer -= update_time.0;
             if rocket_launcher.timer <= 0.0 {
                 let position = rocket_launcher.position;
-                lazy_update.execute(move |world| {
+                lazy_update.exec(move |world| {
                     ::entity::create_rocket(position, world);
                 });
                 rocket_launcher.timer = ::CFG.rocket_launcher_timer;

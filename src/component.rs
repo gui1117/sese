@@ -100,11 +100,11 @@ impl PhysicBody {
         entity: ::specs::Entity,
         mut body: ::nphysics::object::RigidBody<f32>,
         bodies: &mut ::specs::WriteStorage<'a, ::component::PhysicBody>,
-        physic_world: &mut ::specs::FetchMut<'a, ::resource::PhysicWorld>,
+        physic_world: &mut ::resource::PhysicWorld,
     ) {
         body.set_user_data(Some(Box::new(entity)));
         let bodyhandle = physic_world.add_rigid_body(body);
-        bodies.insert(entity, PhysicBody { handle: bodyhandle });
+        bodies.insert(entity, PhysicBody { handle: bodyhandle }).unwrap();
     }
 
     #[inline]
@@ -150,7 +150,7 @@ impl PhysicSensor {
         entity: ::specs::Entity,
         mut sensor: ::nphysics::object::Sensor<f32>,
         sensors: &mut ::specs::WriteStorage<'a, ::component::PhysicSensor>,
-        physic_world: &mut ::specs::FetchMut<'a, ::resource::PhysicWorld>,
+        physic_world: &mut ::resource::PhysicWorld,
     ) {
         sensor.set_user_data(Some(Box::new(entity)));
         let sensorhandle = physic_world.add_sensor(sensor);

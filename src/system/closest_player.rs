@@ -7,7 +7,7 @@ impl<'a> ::specs::System<'a> for ClosestPlayerSystem {
         ::specs::ReadStorage<'a, ::component::Player>,
         ::specs::ReadStorage<'a, ::component::PhysicBody>,
         ::specs::WriteStorage<'a, ::component::ClosestPlayer>,
-        ::specs::Fetch<'a, ::resource::PhysicWorld>,
+        ::specs::ReadExpect<'a, ::resource::PhysicWorld>,
     );
 
     fn run(

@@ -5,8 +5,8 @@
 # finir:
 
 * camera
-* graphisme
 * variables
+* graphisme
 * son
 
 # gameplay

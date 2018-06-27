@@ -9,10 +9,10 @@ pub trait WorldAction {
 fn safe_maintain(world: &mut ::specs::World) {
     world.maintain();
     let mut physic_world = world.write_resource::<::resource::PhysicWorld>();
-    for body in world.write::<::component::PhysicBody>().retained() {
+    for body in world.write_storage::<::component::PhysicBody>().retained() {
         physic_world.remove_rigid_body(body.handle());
     }
-    for sensor in world.write::<::component::PhysicBody>().retained() {
+    for sensor in world.write_storage::<::component::PhysicBody>().retained() {
         physic_world.remove_sensor(sensor.handle());
     }
 }

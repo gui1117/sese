@@ -1,7 +1,10 @@
+use hibitset::BitSetLike;
+use specs::storage::{MaskedStorage, TryDefault, UnprotectedStorage};
+use specs::world::Index;
+use specs::{Component, Join, Storage};
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::DerefMut;
-use specs::{Component, Index, Join, MaskedStorage, Storage, UnprotectedStorage};
 
 pub trait Retained<C> {
     fn retained(&mut self) -> Vec<C>;
@@ -14,7 +17,9 @@ where
     D: DerefMut<Target = MaskedStorage<T>>,
 {
     fn retained(&mut self) -> Vec<T> {
-        self.open().1.retained()
+        unsafe {
+            self.open().1.retained()
+        }
     }
 }
 
@@ -26,12 +31,12 @@ pub struct RetainedStorage<C, T = UnprotectedStorage<C>> {
 
 impl<C, T> Default for RetainedStorage<C, T>
 where
-    T: Default,
+    T: TryDefault,
 {
     fn default() -> Self {
         RetainedStorage {
             retained: vec![],
-            storage: T::default(),
+            storage: T::try_default().unwrap(),
             phantom: PhantomData,
         }
     }
@@ -44,11 +49,11 @@ impl<C, T> Retained<C> for RetainedStorage<C, T> {
 }
 
 impl<C: Clone, T: UnprotectedStorage<C>> UnprotectedStorage<C> for RetainedStorage<C, T> {
-    unsafe fn clean<F>(&mut self, f: F)
+    unsafe fn clean<B>(&mut self, has: B)
     where
-        F: Fn(Index) -> bool,
+        B: BitSetLike,
     {
-        self.storage.clean(f)
+        self.storage.clean(has)
     }
 
     unsafe fn get(&self, id: Index) -> &C {
