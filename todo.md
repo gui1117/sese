@@ -4,9 +4,15 @@
 
 # finir:
 
-* camera
+* graphisme:
+  * [x] also maybe redo colors rgba
+  * [ ] faire skybox étoile
+  * [ ] faire texture pré généré ?
+  * [ ] faire  que si caméra dans un mur alos l'interieur est un peu transparant: ou juste tout les z plus petit que X sont transparant !
+* corriger problème un joueur gamepad tous ou alors faire qu'il faut start mais choisir !
+* faire menu avec gamepad
+* camera: smooth
 * variables
-* graphisme: also maybe redo colors rgba
 * son
 
 # gameplay

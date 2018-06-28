@@ -412,21 +412,17 @@ impl GameState for Game {
         let players_entities = world.read_resource::<::resource::PlayersEntities>();
         let mut flight_controls = world.write_storage::<::component::FlightControl>();
 
-        let player = if let ::resource::Mode::Mode1Player = *mode {
-            Some(0)
-        } else {
-            players_controllers
-                .iter()
-                .enumerate()
-                .find(|&(_, player_controller)| {
-                    if let Some(::resource::Controller::Gamepad(player_controller_id)) = *player_controller {
-                        player_controller_id == id
-                    } else {
-                        false
-                    }
-                })
-                .map(|(player_number, _)| player_number)
-        };
+        let player = players_controllers
+            .iter()
+            .enumerate()
+            .find(|&(_, player_controller)| {
+                if let Some(::resource::Controller::Gamepad(player_controller_id)) = *player_controller {
+                    player_controller_id == id
+                } else {
+                    false
+                }
+            })
+            .map(|(player_number, _)| player_number);
 
         let free_player = players_controllers
             .iter()
@@ -479,7 +475,7 @@ impl GameState for Game {
     fn paused(&self, world: &World) -> bool {
         let number_of_player = world.read_resource::<::resource::Mode>().number_of_player();
         let number_of_gamepads = world.read_resource::<::resource::PlayersControllers>().iter().filter(|g| g.is_some()).count();
-        number_of_player != 1 && number_of_player != number_of_gamepads
+        number_of_player != number_of_gamepads
     }
 }
 

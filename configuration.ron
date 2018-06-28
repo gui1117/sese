@@ -4,6 +4,9 @@ Configuration(
     unlocal_texture_size: 128,//512,
     unlocal_texture_layers: 9,//11,
 
+    color_black: 0.3,
+    color_white: 0.75,
+
     physic_max_step_time: 0.008,
     physic_min_step_time: 0.00001,
 

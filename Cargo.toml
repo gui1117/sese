@@ -35,3 +35,4 @@ image = "0.19"
 enum-iterator-derive = "0.1"
 itertools = "0.7"
 rusttype = { version = "0.6", features = ["gpu_cache"] }
+palette = "0.4"

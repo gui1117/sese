@@ -1,7 +1,5 @@
 const GEN_PALE_DIVISION: usize = 10;
 const GEN_PALE_DELTA: f32 = 0.0;
-const GEN_PALE_BLACK: f32 = 0.6;
-const GEN_PALE_WHITE: f32 = 0.75;
 
 #[derive(EnumIterator)]
 #[repr(usize)]
@@ -35,7 +33,7 @@ impl GenPale {
 
 lazy_static! {
    static ref  GEN_PALE_GENERATION: Vec<[f32; 3]> =
-       generate_colors(GEN_PALE_DIVISION, GEN_PALE_DELTA, GEN_PALE_BLACK, GEN_PALE_WHITE);
+       generate_colors(GEN_PALE_DIVISION, GEN_PALE_DELTA, ::CFG.color_black, ::CFG.color_white);
 }
 
 impl Into<[f32; 3]> for GenPale {
@@ -61,6 +59,15 @@ fn generate_colors(division: usize, delta: f32, black: f32, white: f32) -> Vec<[
             color[1] * (white - black) + black,
             color[2] * (white - black) + black,
         ]);
+    }
+
+    // Convert from Srgb to Unorm
+    for color in &mut colors {
+        let lin_color = ::palette::LinSrgb::new(color[0], color[1], color[2]);
+        let srgb_color = ::palette::Srgb::from_encoding(lin_color);
+        color[0] = srgb_color.red;
+        color[1] = srgb_color.green;
+        color[2] = srgb_color.blue;
     }
 
     colors

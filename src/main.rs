@@ -1,3 +1,4 @@
+extern crate palette;
 extern crate hibitset;
 extern crate alga;
 extern crate app_dirs2;

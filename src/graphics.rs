@@ -237,6 +237,7 @@ impl Graphics {
                 .expect("failed to get surface capabilities");
 
             let dimensions = caps.current_extent.unwrap_or([1280, 1024]);
+            // TODO: choose the right one if possible
             let format = caps.supported_formats[0].0;
             let image_usage = ImageUsage {
                 color_attachment: true,
