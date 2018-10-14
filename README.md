@@ -1,3 +1,3 @@
 # sese
 
-aborted game
+aborted game experiment
